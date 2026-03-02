@@ -165,7 +165,7 @@ Sets a global pointer to 'device' all .fn. are now bounded to this 'device'.
 | `gy521_init(addr)` | Initilize I²C connection and returns a device struct |
 | `gy521_use(device)` | Set the global pointer for fn.* to 'device' |
 | `fn.test_connection()` | Verifies device via WHO_AM_I register |
-| `fn.reset()` | Performs device reset |
+| `fn.reset()` | Performs resets set in conf.reset.* |
 | `fn.sleep()` | Enables/disables sleep mode |
 | `fn.fsr()` | Sets full-scale range and updates scaling |
 | `fn.stby()` | Enables/disables standby per axis |
