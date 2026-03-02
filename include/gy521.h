@@ -185,13 +185,19 @@ typedef struct gy521_s{
 	struct{
 		bool sleep; // Device sleep state
 		uint8_t clksel; // Clock source
-		bool reset; // Device reset flag
+		struct{
+			bool device;
+			bool fifo;
+			bool i2c_mst;
+			bool sig_cond;
+		} reset; // Reset flags
 		bool scaled;
 		uint8_t addr; // Device Address
 
 		struct{
 			uint8_t fsr; // Full scale range setting
 			float fsr_divider;
+			bool reset;
 
 			struct{ bool stby; } x;
 			struct{ bool stby; } y;
@@ -200,12 +206,14 @@ typedef struct gy521_s{
 
 		struct{
 			bool sleep; // Disable temperature sensor
+			bool reset;
 		} temp;
 
 		struct{
 			uint8_t fsr;
 			float fsr_divider;
 			gy521_offset_t offset;
+			bool reset;
 
 			struct{ bool clksel, stby; } x;
 			struct{ bool clksel, stby; } y;

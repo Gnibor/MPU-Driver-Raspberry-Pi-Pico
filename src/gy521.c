@@ -50,14 +50,14 @@
 // =============================================
 #define GY521_GYRO_RESET (1 << 2)
 #define GY521_ACCEL_RESET (1 << 1)
-#define GY521_TEMP_RESET 0x01
+#define GY521_TEMP_RESET (1 << 0)
 
 #define GY521_FIFO_EN (1 << 6)
 #define GY521_I2C_MST_EN (1 << 5)
 #define GY521_I2C_IF_DIS (1 << 4)
 #define GY521_FIFO_RESET (1 << 2)
 #define GY521_I2C_MST_RESET (1 << 1)
-#define GY521_SIG_COND_RESET 0x01
+#define GY521_SIG_COND_RESET (1 << 0)
 
 #define GY521_DEVICE_RESET (1 << 7)
 #define GY521_SLEEP (1 << 6) // Sleep mode enable/disable
@@ -69,7 +69,7 @@
 #define GY521_STBY_ZA (1 << 3)
 #define GY521_STBY_XG (1 << 2)
 #define GY521_STBY_YG (1 << 1)
-#define GY521_STBY_ZG 0x01
+#define GY521_STBY_ZG (1 << 0)
 
 // ===========================
 // === Function prototypes ===
@@ -175,12 +175,34 @@ bool gy521_test_connection(void){
 bool gy521_reset(void){
 	if(!g_gy521) return false;
 
-	if(!gy521_read_register(GY521_REG_PWR_MGMT_1, g_gy521_cache, 1)) return false;
-	g_gy521_cache[0] |= GY521_DEVICE_RESET;
+	if(g_gy521->conf.accel.reset || g_gy521->conf.temp.reset || g_gy521->conf.gyro.reset){
+		if(!gy521_read_register(GY521_REG_SIGNAL_PATH_RESET, g_gy521_cache, 1)) return false;
 
-	g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_PWR_MGMT_1, g_gy521_cache[0]}, 2, false);
-	if(g_gy521_ret_cache!= 2) return false;
+		if (g_gy521->conf.accel.reset) g_gy521_cache[0] |= GY521_ACCEL_RESET;
+		else if(g_gy521->conf.gyro.reset) g_gy521_cache[0] |= GY521_GYRO_RESET;
+		else if(g_gy521->conf.temp.reset) g_gy521_cache[0] |= GY521_TEMP_RESET;
 
+		g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_SIGNAL_PATH_RESET, g_gy521_cache[0]}, 2, false);
+		if(g_gy521_ret_cache!= 2) return false;
+	}
+	if(g_gy521->conf.reset.fifo || g_gy521->conf.reset.i2c_mst || g_gy521->conf.reset.sig_cond){
+		if(!gy521_read_register(GY521_REG_USER_CTRL, g_gy521_cache, 1)) return false;
+
+		if (g_gy521->conf.reset.fifo) g_gy521_cache[0] |= GY521_FIFO_RESET;
+		else if(g_gy521->conf.reset.i2c_mst) g_gy521_cache[0] |= GY521_I2C_MST_RESET;
+		else if(g_gy521->conf.reset.sig_cond) g_gy521_cache[0] |= GY521_SIG_COND_RESET;
+
+		g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_USER_CTRL, g_gy521_cache[0]}, 2, false);
+		if(g_gy521_ret_cache!= 2) return false;
+	}
+	if(g_gy521->conf.reset.device){
+		if(!gy521_read_register(GY521_REG_PWR_MGMT_1, g_gy521_cache, 1)) return false;
+
+		g_gy521_cache[0] |= GY521_DEVICE_RESET;
+
+		g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_PWR_MGMT_1, g_gy521_cache[0]}, 2, false);
+		if(g_gy521_ret_cache!= 2) return false;
+	}
 	return true;
 }
 
