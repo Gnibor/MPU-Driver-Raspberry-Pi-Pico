@@ -119,14 +119,15 @@
 // ===========================
 // === Function prototypes ===
 // ===========================
-bool gy521_test_connection(void);
+bool gy521_who_am_i(void);
 bool gy521_read_reg(uint8_t reg, uint8_t *out, uint8_t how_many);
 bool gy521_reset(void);
 bool gy521_sleep(void); // Set sleep configuration
-bool gy521_set_fsr(void);
-bool gy521_set_clksel(void);
-bool gy521_set_stby(void);
+bool gy521_fsr(void);
+bool gy521_clksel(void);
+bool gy521_stby(void);
 bool gy521_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
+bool gy521_int_pin_cfg(void);
 bool gy521_read(uint8_t accel_temp_gyro); // 0=all 1=accel 2=temp 3=gyro
 
 // ========================
@@ -178,12 +179,12 @@ gy521_s gy521_init(uint8_t addr){
 
 	gy521.fn.reset = &gy521_reset;
 	gy521.fn.sleep = &gy521_sleep;
-	gy521.fn.test_connection = &gy521_test_connection;
+	gy521.fn.test_connection = &gy521_who_am_i;
 	gy521.fn.read = &gy521_read;
 	gy521.fn.gyro.calibrate = &gy521_calibrate_gyro;
-	gy521.fn.fsr = &gy521_set_fsr;
-	gy521.fn.stby = &gy521_set_stby;
-	gy521.fn.clk_sel = &gy521_set_clksel;
+	gy521.fn.fsr = &gy521_fsr;
+	gy521.fn.stby = &gy521_stby;
+	gy521.fn.clksel = &gy521_clksel;
 
 	return gy521;
 }
@@ -206,7 +207,7 @@ bool gy521_read_register(uint8_t reg, uint8_t *out, uint8_t how_many){
 // =======================
 // === Test Connection ===
 // =======================
-bool gy521_test_connection(void){
+bool gy521_who_am_i(void){
 	uint8_t who_am_i;
 	if(!gy521_read_register(GY521_REG_WHO_AM_I, &who_am_i, 1)) return false;
 	return who_am_i == 0x68 ? true : false;
@@ -252,7 +253,7 @@ bool gy521_reset(void){
 // ==========================================
 // === Set Standby in Register PWR_MGMT_2 ===
 // ==========================================
-bool gy521_set_stby(void){
+bool gy521_stby(void){
 	if(!g_gy521) return false;
 	if(!gy521_read_register(GY521_REG_PWR_MGMT_2, g_gy521_cache, 1)) return false;
 
@@ -274,7 +275,7 @@ bool gy521_set_stby(void){
 // ==========================================
 // === Set CLK_SEL in Register PWR_MGMT_1 ===
 // ==========================================
-bool gy521_set_clksel(void){
+bool gy521_clksel(void){
 	if(!g_gy521) return false;
 
 	if(g_gy521->opt.clksel.gyro.x) g_gy521->conf.clksel = GY521_CLKSEL_GYRO_X;
@@ -320,7 +321,7 @@ bool gy521_sleep(void){
 // ===  Set Full-Scale Range (FSR) ===
 // === & Calculate Scaling Factors ===
 // ===================================
-bool gy521_set_fsr(void){
+bool gy521_fsr(void){
 	if(!g_gy521) return false;
 	// Read FSR Register
 	if(!gy521_read_register(GY521_REG_GYRO_CONFIG, g_gy521_cache, 2)) return false;
@@ -386,6 +387,15 @@ bool gy521_calibrate_gyro(uint8_t samples){
 	g_gy521->conf.gyro.offset.x = sum_gx / samples;
 	g_gy521->conf.gyro.offset.y = sum_gy / samples;
 	g_gy521->conf.gyro.offset.z = sum_gz / samples;
+
+	return true;
+}
+
+// ===============================
+// === Interrupt configuration ===
+// ===============================
+bool gy521_int_pin_cfg(void){
+	if(!g_gy521) return false;
 
 	return true;
 }
