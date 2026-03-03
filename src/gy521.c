@@ -162,11 +162,11 @@ gy521_s gy521_init(uint8_t addr){
 	gpio_pull_up(GY521_SCL_PIN);
 #endif
 
+#if GY521_INT_PIN
 	// Configure optional interrupt pin
-	if (GY521_INT_PIN >= 0){
-		gpio_init(GY521_INT_PIN);
-		gpio_set_dir(GY521_INT_PIN, GPIO_IN);
-	}
+	gpio_init(GY521_INT_PIN);
+	gpio_set_dir(GY521_INT_PIN, GPIO_IN);
+#endif
 
 	gy521_s gy521; // Initalize device struct and function pointers
 	memset(&gy521, 0, sizeof(gy521));
