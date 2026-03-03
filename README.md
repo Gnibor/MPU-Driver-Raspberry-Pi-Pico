@@ -169,6 +169,7 @@ And set 'device' as active.
 
 If '#define GY521_INT_PIN' is not '0' you unlock these functions
 
+| Function | Description |
 |----------|------------|
 | `bool fn.interrupt.pin_cfg()` | Configures the interrupts pins |
 | `bool fn.interrupt.enable()` | Enables interrupts |
