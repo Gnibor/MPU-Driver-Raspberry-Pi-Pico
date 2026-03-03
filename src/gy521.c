@@ -37,9 +37,11 @@
 // ==========================================
 #define GY521_REG_GYRO_CONFIG 0x1b
 #define GY521_REG_ACCEL_CONFIG 0x1c
+#if GY521_INT_PIN
 #define GY521_REG_INT_PIN_CFG 0x37
 #define GY521_REG_INT_ENABLE 0x38
 #define GY521_REG_INT_STATUS 0x3A
+#endif
 #define GY521_REG_ACCEL_XOUT_H 0x3B
 #define GY521_REG_TEMP_OUT_H 0x41
 #define GY521_REG_GYRO_XOUT_H  0x43
@@ -52,7 +54,7 @@
 // =============================================
 // === Bitmasks for reset, FIFO, sleep, etc. ===
 // =============================================
-
+#if GY521_INT_PIN
 // GY521_REG_INT_PIN_CFG
 #define GY521_I2C_BYPASS_EN (1 << 1)
 #define GY521_FSYNC_INT_EN (1 << 2)
@@ -71,6 +73,7 @@
 #define GY521_DATA_RDY_INT (1 << 0)
 #define GY521_I2C_MST_INT (1 << 3)
 #define GY521_FIFO_OFLOW_INT (1 << 4)
+#endif
 
 // GY521_REG_SIGNAL_PATH_RESET
 #define GY521_GYRO_RESET (1 << 2)
@@ -130,8 +133,13 @@ bool gy521_fsr(void);
 bool gy521_clksel(void);
 bool gy521_stby(void);
 bool gy521_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
-bool gy521_int_pin_cfg(void);
 bool gy521_read(uint8_t accel_temp_gyro); // 0=all 1=accel 2=temp 3=gyro
+
+#if GY521_INT_PIN
+bool gy521_int_pin_cfg(void);
+bool gy521_int_enable(void);
+bool gy521_int_status(void);
+#endif
 
 // ========================
 // === Global Variables ===
@@ -188,6 +196,11 @@ gy521_s gy521_init(uint8_t addr){
 	gy521.fn.fsr = &gy521_fsr;
 	gy521.fn.stby = &gy521_stby;
 	gy521.fn.clksel = &gy521_clksel;
+#if GY521_INT_PIN
+	gy521.fn.interrupt.pin_cfg = &gy521_int_pin_cfg;
+	gy521.fn.interrupt.enable = &gy521_int_enable;
+	gy521.fn.interrupt.status = &gy521_int_status;
+#endif
 
 	return gy521;
 }
@@ -199,10 +212,10 @@ bool gy521_read_register(uint8_t reg, uint8_t *out, uint8_t how_many){
 	if(!g_gy521) return false;
 
 	uint8_t g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){reg}, 1, true);
-	if(g_gy521_ret_cache!= 1) return false;
+	if(g_gy521_ret_cache != 1) return false;
 
 	g_gy521_ret_cache = i2c_read_blocking(GY521_I2C_PORT, g_gy521->conf.addr, out, how_many, false);
-	if(g_gy521_ret_cache!= how_many) return false;
+	if(g_gy521_ret_cache != how_many) return false;
 
 	return true;
 }
@@ -230,7 +243,7 @@ bool gy521_reset(void){
 		else if(g_gy521->opt.reset.gyro) g_gy521_cache[0] |= GY521_GYRO_RESET;
 
 		g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_SIGNAL_PATH_RESET, g_gy521_cache[0]}, 2, false);
-		if(g_gy521_ret_cache!= 2) return false;
+		if(g_gy521_ret_cache != 2) return false;
 	}
 	if(g_gy521->opt.reset.fifo || g_gy521->opt.reset.i2c_mst || g_gy521->opt.reset.sig_cond){
 		if(!gy521_read_register(GY521_REG_USER_CTRL, g_gy521_cache, 1)) return false;
@@ -240,7 +253,7 @@ bool gy521_reset(void){
 		else if(g_gy521->opt.reset.sig_cond) g_gy521_cache[0] |= GY521_SIG_COND_RESET;
 
 		g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_USER_CTRL, g_gy521_cache[0]}, 2, false);
-		if(g_gy521_ret_cache!= 2) return false;
+		if(g_gy521_ret_cache != 2) return false;
 	}
 	if(g_gy521->opt.reset.device){
 		if(!gy521_read_register(GY521_REG_PWR_MGMT_1, g_gy521_cache, 1)) return false;
@@ -248,7 +261,7 @@ bool gy521_reset(void){
 		g_gy521_cache[0] |= GY521_DEVICE_RESET;
 
 		g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_PWR_MGMT_1, g_gy521_cache[0]}, 2, false);
-		if(g_gy521_ret_cache!= 2) return false;
+		if(g_gy521_ret_cache != 2) return false;
 	}
 	return true;
 }
@@ -270,7 +283,7 @@ bool gy521_stby(void){
 	if(g_gy521->opt.stby.accel.z) g_gy521_cache[0] |= GY521_STBY_ZA;
 
 	g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){ GY521_REG_PWR_MGMT_2, g_gy521_cache[0]}, 2, false);
-	if(g_gy521_ret_cache!= 2) return false;
+	if(g_gy521_ret_cache != 2) return false;
 
 	return true;
 }
@@ -294,7 +307,7 @@ bool gy521_clksel(void){
 	g_gy521_cache[0] |= g_gy521->conf.clksel;
 
 	g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){ GY521_REG_PWR_MGMT_1, g_gy521_cache[0]}, 2, false);
-	if(g_gy521_ret_cache!= 2) return false;
+	if(g_gy521_ret_cache != 2) return false;
 
 	return true;
 }
@@ -356,10 +369,68 @@ bool gy521_fsr(void){
 
 	// Write back to registers
 	 g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_GYRO_CONFIG, g_gy521_cache[0], g_gy521_cache[1]}, 3, false);
-	if(g_gy521_ret_cache!= 3) return false;
+	if(g_gy521_ret_cache != 3) return false;
 
 	return true;
 }
+
+#if GY521_INT_PIN
+// ===================================
+// === Interrupt pin configuration ===
+// ===================================
+bool gy521_int_pin_cfg(void){
+	if(!g_gy521) return false;
+
+	if(!gy521_read_register(GY521_REG_INT_PIN_CFG, g_gy521_cache, 1)) return false;
+
+	if(g_gy521->opt.interrupt.pin_cfg.int_level) g_gy521_cache[0] |= GY521_INT_LEVEL;
+	if(g_gy521->opt.interrupt.pin_cfg.int_open) g_gy521_cache[0] |= GY521_INT_OPEN;
+	if(g_gy521->opt.interrupt.pin_cfg.latch_int_en) g_gy521_cache[0] |= GY521_LATCH_INT_EN;
+	if(g_gy521->opt.interrupt.pin_cfg.int_rd_clear) g_gy521_cache[0] |= GY521_INT_RD_CLEAR;
+	if(g_gy521->opt.interrupt.pin_cfg.fsync_int_level) g_gy521_cache[0] |= GY521_FSYNC_INT_LEVEL;
+	if(g_gy521->opt.interrupt.pin_cfg.fsync_int_en) g_gy521_cache[0] |= GY521_FSYNC_INT_EN;
+	if(g_gy521->opt.interrupt.pin_cfg.i2c_bypass_en) g_gy521_cache[0] |= GY521_I2C_BYPASS_EN;
+
+	// Write back to registers
+	g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_INT_PIN_CFG, g_gy521_cache[0]}, 2, false);
+	if(g_gy521_ret_cache != 2) return false;
+
+	return true;
+}
+
+bool gy521_int_enable(void){
+	if(!g_gy521) return false;
+
+	if(!gy521_read_register(GY521_REG_INT_ENABLE, g_gy521_cache, 1)) return false;
+
+	if(g_gy521->opt.interrupt.enable.data_rdy_en) g_gy521_cache[0] |= GY521_DATA_RDY_EN;
+	if(g_gy521->opt.interrupt.enable.i2c_mst_int_en) g_gy521_cache[0] |= GY521_I2C_MST_INT_EN;
+	if(g_gy521->opt.interrupt.enable.fifo_owflow_en) g_gy521_cache[0] |= GY521_FIFO_OFLOW_EN;
+
+	// Write back to registers
+	g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_INT_ENABLE, g_gy521_cache[0]}, 2, false);
+	if(g_gy521_ret_cache != 2) return false;
+
+	return true;
+}
+
+bool gy521_int_status(void){
+	if(!g_gy521) return false;
+
+	if(!gy521_read_register(GY521_REG_INT_STATUS, g_gy521_cache, 1)) return false;
+
+	if(g_gy521_cache[0] & GY521_DATA_RDY_INT) g_gy521->v.int_status.data_rdy_int = true;
+	else if(!(g_gy521_cache[0] & GY521_DATA_RDY_INT)) g_gy521->v.int_status.data_rdy_int = false;
+
+	if(g_gy521_cache[0] & GY521_I2C_MST_INT) g_gy521->v.int_status.i2c_mst_int = true;
+	else if(!(g_gy521_cache[0] & GY521_I2C_MST_INT)) g_gy521->v.int_status.i2c_mst_int = true;
+
+	if(g_gy521_cache[0] & GY521_FIFO_OFLOW_INT) g_gy521->v.int_status.fifo_owflow_int = true;
+	else if(!(g_gy521_cache[0] & GY521_FIFO_OFLOW_INT)) g_gy521->v.int_status.fifo_owflow_int = false;
+
+	return true;
+}
+#endif // GY521_INT_PIN
 
 // ====================================================
 // === Calibrate gyro (determine zero-point offset) ===
@@ -393,31 +464,6 @@ bool gy521_calibrate_gyro(uint8_t samples){
 
 	return true;
 }
-
-#if GY521_INT_PIN
-// ===================================
-// === Interrupt pin configuration ===
-// ===================================
-bool gy521_int_pin_cfg(void){
-	if(!g_gy521) return false;
-
-	if(!gy521_read_register(GY521_REG_INT_PIN_CFG, g_gy521_cache, 1)) return false;
-
-	if(g_gy521->opt.interrupt.pin_cfg.int_level) g_gy521_cache[0] |= GY521_INT_LEVEL;
-	if(g_gy521->opt.interrupt.pin_cfg.int_open) g_gy521_cache[0] |= GY521_INT_OPEN;
-	if(g_gy521->opt.interrupt.pin_cfg.latch_int_en) g_gy521_cache[0] |= GY521_LATCH_INT_EN;
-	if(g_gy521->opt.interrupt.pin_cfg.int_rd_clear) g_gy521_cache[0] |= GY521_INT_RD_CLEAR;
-	if(g_gy521->opt.interrupt.pin_cfg.fsync_int_level) g_gy521_cache[0] |= GY521_FSYNC_INT_LEVEL;
-	if(g_gy521->opt.interrupt.pin_cfg.fsync_int_en) g_gy521_cache[0] |= GY521_FSYNC_INT_EN;
-	if(g_gy521->opt.interrupt.pin_cfg.i2c_bypass_en) g_gy521_cache[0] |= GY521_I2C_BYPASS_EN;
-
-	// Write back to registers
-	g_gy521_ret_cache = i2c_write_blocking(GY521_I2C_PORT, g_gy521->conf.addr, (uint8_t[]){GY521_REG_INT_PIN_CFG, g_gy521_cache[0]}, 2, false);
-	if(g_gy521_ret_cache!= 2) return false;
-
-	return true;
-}
-#endif // GY521_INT_PIN
 
 // ===========================================
 // === Read Sensor Data + Optional Scaling ===

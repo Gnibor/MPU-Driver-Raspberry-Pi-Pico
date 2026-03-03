@@ -220,16 +220,17 @@ typedef struct gy521_s{
 	struct{
 		uint8_t addr; // Device Address
 		uint8_t clksel;
-		struct{
-			uint8_t fsr;
-			float fsr_divider;
-			gy521_offset_t offset;
-		} gyro;
 		
 		struct{
 			uint8_t fsr;
 			float fsr_divider;
 		} accel;
+
+		struct{
+			uint8_t fsr;
+			float fsr_divider;
+			gy521_offset_t offset;
+		} gyro;
 	} conf;
 
 	// =========================
@@ -245,17 +246,16 @@ typedef struct gy521_s{
 		bool (*clksel)(void);
 
 		struct{
-			//bool (*sleep)(void);
-		} accel;
-
-		struct{
-			//bool (*sleep)(void);
-		} temp;
-
-		struct{
 			bool (*calibrate)(uint8_t);
-			//bool (*sleep)(void);
 		} gyro;
+
+#if GY521_INT_PIN
+		struct{
+			bool (*pin_cfg)(void);
+			bool (*enable)(void);
+			bool (*status)(void);
+		} interrupt;
+#endif
 	} fn;
 } gy521_s;
 
@@ -263,7 +263,7 @@ typedef struct gy521_s{
 // === Function declaration ===
 // ============================
 /*
- * gy521_init();
+ * gy521_init(addr);
  * Initializes the I²C connection and default configuration.
  * Returns a fully initialized gy521_s struct with function pointers and default values.
  */
