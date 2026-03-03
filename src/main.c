@@ -38,8 +38,7 @@ int main(void){
 	stdio_init_board();
 	gy521_s gy521 = gy521_init(GY521_I2C_ADDR_GND);
 	gy521_use(&gy521);
-	gy521.conf.reset.device = true;
-	if(gy521.fn.reset()) printf("GY-521 got reset\n");
+
 	int retries = 3;
 	bool connected = false;
 	printf("Try connecting GY-521...\n");
@@ -53,14 +52,15 @@ int main(void){
 	if(!connected) printf("GY-521 not found!\n");
 	else printf("GY-521 ready!\n");
 
-
-	gy521.conf.scaled = true;
-	gy521.conf.sleep = false;
+	gy521.opt.reset.device = true;
+	gy521.opt.scaled = true;
+	gy521.opt.sleep.device = false;
 	gy521.conf.accel.fsr = GY521_ACCEL_FSR_SEL_8G;
 	gy521.conf.gyro.fsr = GY521_GYRO_FSR_SEL_2000DPS;
-	gy521.conf.gyro.x.clksel = true;
+	gy521.opt.clksel.gyro.x = true;
 
-	if(gy521.fn.sleep()) printf("GY-521 sleep stop\n");
+	if(gy521.fn.reset()) printf("GY-521 got reset\n");
+	if(gy521.fn.sleep()) printf("GY-521 deactivate sleep\n");
 	if(gy521.fn.fsr()) printf("GY-521 Full-Scale-Range is set.\n");
 	if(gy521.fn.clk_sel()) printf("GY-521 Clock Select set to GyroX\n");
 

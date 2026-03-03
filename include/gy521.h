@@ -191,7 +191,6 @@ typedef struct gy521_s{
 	// ===============
 	struct{
 		bool scaled;
-		uint8_t addr; // Device Address
 
 		struct{
 			bool device, temp;
@@ -223,12 +222,16 @@ typedef struct gy521_s{
 	// === Configuration ===
 	// =====================
 	struct{
+		uint8_t addr; // Device Address
+		uint8_t clksel;
 		struct{
+			uint8_t fsr;
 			float fsr_divider;
 			gy521_offset_t offset;
 		} gyro;
 		
 		struct{
+			uint8_t fsr;
 			float fsr_divider;
 		} accel;
 	} conf;
