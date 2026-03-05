@@ -26,7 +26,6 @@
  *
  * ================================================================
  */
-#include "MPU-60X0_reg_map.h"
 #include "pico/stdlib.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -34,6 +33,7 @@
 
 #include "default.h"
 #include "gy521.h"
+#include "MPU-60X0_reg_map.h"
 
 volatile bool mpu_irq_flag = false;
 
@@ -63,45 +63,32 @@ int main(void){
 
 	if(!gy521.fn.sleep(false,false)) printf("sleep did not get deactivated!!!\n");
 	else printf("sleep is deactivated!\n");
-/*	gy521.opt.reset.device = true;
-	gy521.opt.scaled = true;
-	gy521.opt.sleep.device = false;
-	gy521.opt.fsr.accel.g8 = true;
-	gy521.opt.fsr.gyro.dps2000 = true;
-	gy521.opt.clksel.gyro.x = true;
-*/
 
-	//gy521.conf.gyro.y.stby = true;
-	//if(gy521.fn.stby()) printf("YG in standby\n");
-	//gy521.conf.temp.sleep = true;
-	//if(gy521.fn.sleep()) printf("temp in standby\n");
-
-	gy521.fn.fsr(GY521_FSR_2000DPS, GY521_AFSR_8G);
+	if(!gy521.fn.fsr(GY521_FSR_2000DPS, GY521_AFSR_8G)) printf("Could not set the SFR/AFSR\n");
+	else printf("FSR=2000dps, AFSR=8g\n");
 
 	printf("Try to calibrate GY-521\n");
 	sleep_ms(2000);
 	if(gy521.fn.gyro.calibrate(10)) printf("GY-521 is now calibrated.\n");
 	else printf("GY-521 could not be calibrated.\n");
 
-	printf("how big is it?: %d\n", sizeof(gy521));
+	printf("how big is the struct: %dbytes\n", sizeof(gy521));
+
+	if(!gy521.fn.stby(GY521_STBY_YA)) printf("Could not set stand-by for YA!!!\n");
+	else printf("YA is now stand-by!\n");
 
 	// INT Pin Konfiguration im MPU
     gy521.fn.interrupt.pin_cfg(
-        GY521_INT_LEVEL_LOW | // Pegel statt Puls
-        GY521_INT_OPEN_DRAIN   | // Push-Pull / Open-Drain (je nach Definition: hier Push-Pull)
-        GY521_LATCH_INT_EN    | // Latch Interrupt aktiv
-        GY521_INT_RD_CLEAR // Interrupt beim Lesen zurücksetzen
+        GY521_INT_LEVEL_LOW  | // Pegel statt Puls
+        GY521_INT_OPEN_DRAIN | // Push-Pull / Open-Drain (je nach Definition: hier Push-Pull)
+        GY521_LATCH_INT_EN   | // Latch Interrupt aktiv
+        GY521_INT_RD_CLEAR     // Interrupt beim Lesen zurücksetzen
     );
 
-    // Data Ready Interrupt aktivieren
+    // Data ready interrupt activate
     gy521.fn.interrupt.enable(GY521_DATA_RDY_INT);
 
-gpio_set_irq_enabled_with_callback(
-        GY521_INT_PIN,
-        GPIO_IRQ_EDGE_RISE,
-        true,
-        &gy521_irq_handler
-    );
+    gpio_set_irq_enabled_with_callback(GY521_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &gy521_irq_handler);
 
 	while(1){
 		if(gy521.fn.interrupt.status())

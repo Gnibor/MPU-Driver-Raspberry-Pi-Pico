@@ -39,6 +39,7 @@
 // ===========================
 bool gy521_who_am_i(void);
 bool gy521_sleep(bool device, bool temp); // Set sleep configuration
+bool gy521_reg_stby(uint8_t stby);
 bool gy521_fsr(gy521_fsr_t fsr, gy521_afsr_t afsr);
 bool gy521_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
 bool gy521_read_sensor(gy521_sensors_t sensors); // 0=all 1=accel 2=temp 3=gyro
@@ -81,7 +82,9 @@ gy521_s gy521_init(i2c_inst_t *i2c_port, uint8_t addr){
 	// Configure optional interrupt pin
 	gpio_init(GY521_INT_PIN);
 	gpio_set_dir(GY521_INT_PIN, GPIO_IN);
+#if GY521_INT_PULLUP
 	gpio_pull_up(GY521_INT_PIN);
+#endif
 
 	gy521_s gy521; // Initalize device struct and function pointers
 	memset(&gy521, 0, sizeof(gy521));
@@ -98,9 +101,12 @@ gy521_s gy521_init(i2c_inst_t *i2c_port, uint8_t addr){
 	gy521.fn.read_sensor = &gy521_read_sensor;
 	gy521.fn.gyro.calibrate = &gy521_calibrate_gyro;
 	gy521.fn.fsr = &gy521_fsr;
+	gy521.fn.stby = &gy521_reg_stby;
+#if GY521_INT_PIN
 	gy521.fn.interrupt.pin_cfg = &gy521_reg_int_pin_cfg;
 	gy521.fn.interrupt.enable = &gy521_reg_int_enable;
 	gy521.fn.interrupt.status = &gy521_int_status;
+#endif
 
 	return gy521;
 }
@@ -160,6 +166,20 @@ bool gy521_sleep(bool device, bool temp){
 	return true;
 }
 
+bool gy521_reg_stby(uint8_t stby){
+	if(!g_gy521) return false;
+
+	if(!gy521_read_register(GY521_REG_PWR_MGMT_2, g_gy521_cache, 1)) return false;
+
+	g_gy521_cache[0] &= ~0x3F;
+	g_gy521_cache[0] |= stby;
+
+	if(!gy521_write_register((uint8_t[]){GY521_REG_PWR_MGMT_2, g_gy521_cache[0]}, 2, false)) return false;
+
+	return true;
+}
+
+#if GY521_INT_PIN
 // ===================================
 // === Interrupt pin configuration ===
 // ===================================
@@ -205,6 +225,7 @@ bool gy521_int_status(void){
 
 	return true;
 }
+#endif
 
 // ===================================
 // ===  Set Full-Scale Range (FSR) ===

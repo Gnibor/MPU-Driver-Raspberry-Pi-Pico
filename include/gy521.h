@@ -67,6 +67,10 @@
 #define GY521_INT_PIN 26  // Optional interrupt pin (0 and the interrupt parts are not loaded)
 #endif
 
+#ifndef GY521_INT_PULLUP
+#define GY521_INT_PULLUP 0
+#endif
+
 #define GY521_I2C_ADDR_GND 0x68 // Default I2C address for GY-521(MPU-6050) (AD0 pin -> Gnd)
 #define GY521_I2C_ADDR_VCC 0x69 // Default I2C address for GY-521(MPU-6050) (AD0 pin -> Vcc)
 
@@ -74,17 +78,7 @@
 /*
  * Identifiers for selecting specific sensor blocks
  * Used in gy521_read()
- *
- * 0 = read all
- * 1 = accel only
- * 2 = temperature only
- * 3 = gyro only
  */
-//#define GY521_ALL 0
-//#define GY521_ACCEL 1
-//#define GY521_TEMP 2
-//#define GY521_GYRO 3
-
 typedef enum{
 	GY521_ACCEL = (1 << 0),
 	GY521_TEMP = (1 << 1),
@@ -96,7 +90,6 @@ typedef enum{
 // =======================
 // === Data Structures ===
 // =======================
-
 /*
  * Raw axis values directly from registers
  * Signed 16-bit values from sensor
@@ -192,7 +185,7 @@ typedef struct gy521_s{
 		bool (*sleep)(bool device, bool temp);
 		bool (*read_sensor)(gy521_sensors_t);
 		bool (*fsr)(gy521_fsr_t, gy521_afsr_t);
-		bool (*stby)(void);
+		bool (*stby)(uint8_t);
 		bool (*smplrt_div)(uint8_t div);
 
 		struct{
