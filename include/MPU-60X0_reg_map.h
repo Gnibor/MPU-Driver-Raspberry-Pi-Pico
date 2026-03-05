@@ -179,13 +179,17 @@ typedef enum {
 #define GY521_PASS_THROUGH		(1 << 7)
 
 #define GY521_REG_INT_PIN_CFG		0x37
-#define GY521_I2C_BYPASS_EN		(1 << 1)
-#define GY521_FSYNC_INT_EN		(1 << 2)
-#define GY521_FSYNC_INT_LEVEL		(1 << 3)
-#define GY521_INT_RD_CLEAR		(1 << 4)
-#define GY521_LATCH_INT_EN		(1 << 5)
-#define GY521_INT_OPEN			(1 << 6)
-#define GY521_INT_LEVEL			(1 << 7)
+typedef enum {
+    GY521_I2C_BYPASS_EN   = (1 << 1),
+    GY521_FSYNC_INT_EN        = (1 << 2),
+    GY521_FSYNC_INT_LEVEL     = (1 << 3),
+    GY521_INT_RD_CLEAR        = (1 << 4),
+    GY521_LATCH_INT_EN        = (1 << 5),
+    GY521_INT_OPEN_DRAIN      = (1 << 6),
+    GY521_INT_LEVEL_LOW       = (1 << 7),
+
+    GY521_INT_PIN_CFG_ALL     = 0xFE  // alle Bits außer Bit 0 (falls reserviert)
+} gy521_int_pin_cfg_t;
 
 #define GY521_REG_INT_ENABLE		0x38
 #define GY521_DATA_RDY_EN		(1 << 0)
