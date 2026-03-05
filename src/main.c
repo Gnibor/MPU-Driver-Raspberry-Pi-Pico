@@ -53,6 +53,8 @@ int main(void){
 	if(!connected) printf("GY-521 not found!\n");
 	else printf("GY-521 ready!\n");
 
+	if(!gy521.fn.sleep(false,false)) printf("sleep did not get deactivated!!!\n");
+	else printf("sleep is deactivated!\n");
 /*	gy521.opt.reset.device = true;
 	gy521.opt.scaled = true;
 	gy521.opt.sleep.device = false;
