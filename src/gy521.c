@@ -245,42 +245,26 @@ bool gy521_calibrate_gyro(uint8_t samples){
 bool gy521_read_sensor(uint8_t sensors){
 	if(!g_gy521) return false;
 	// Read all sensors
-	if(sensors & GY521_ALL){
-		if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 14)) return false;
+	if(sensors & GY521_ACCEL){
+		if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 6)) return false;
 
 		g_gy521->v.accel.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
 		g_gy521->v.accel.raw.y = (g_gy521_cache[2]  << 8) | g_gy521_cache[3];
 		g_gy521->v.accel.raw.z = (g_gy521_cache[4]  << 8) | g_gy521_cache[5];
-		g_gy521->v.temp.raw = (g_gy521_cache[6]  << 8) | g_gy521_cache[7];
-		g_gy521->v.gyro.raw.x = (g_gy521_cache[8]  << 8) | g_gy521_cache[9];
-		g_gy521->v.gyro.raw.y = (g_gy521_cache[10] << 8) | g_gy521_cache[11];
-		g_gy521->v.gyro.raw.z = (g_gy521_cache[12] << 8) | g_gy521_cache[13];
 
-	// Only accelerometer
-	}else{
-		if(sensors & GY521_ACCEL){
-			if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 6)) return false;
+	}
+	if(sensors & GY521_TEMP){
+		if(!gy521_read_register(GY521_REG_TEMP_OUT_H, g_gy521_cache, 2)) return false;
 
-			g_gy521->v.accel.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
-			g_gy521->v.accel.raw.y = (g_gy521_cache[2]  << 8) | g_gy521_cache[3];
-			g_gy521->v.accel.raw.z = (g_gy521_cache[4]  << 8) | g_gy521_cache[5];
+		g_gy521->v.temp.raw = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
 
-			// Only temperatur
-		}
-		if(sensors & GY521_TEMP){
-			if(!gy521_read_register(GY521_REG_TEMP_OUT_H, g_gy521_cache, 2)) return false;
+	}
+	if(sensors & GY521_GYRO){
+		if(!gy521_read_register(GY521_REG_GYRO_XOUT_H, g_gy521_cache, 6)) return false;
 
-			g_gy521->v.temp.raw = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
-
-			// Only gyroscope
-		}
-		if(sensors & GY521_GYRO){
-			if(!gy521_read_register(GY521_REG_GYRO_XOUT_H, g_gy521_cache, 6)) return false;
-
-			g_gy521->v.gyro.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
-			g_gy521->v.gyro.raw.y = (g_gy521_cache[2] << 8) | g_gy521_cache[3];
-			g_gy521->v.gyro.raw.z = (g_gy521_cache[4] << 8) | g_gy521_cache[5];
-		}
+		g_gy521->v.gyro.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
+		g_gy521->v.gyro.raw.y = (g_gy521_cache[2] << 8) | g_gy521_cache[3];
+		g_gy521->v.gyro.raw.z = (g_gy521_cache[4] << 8) | g_gy521_cache[5];
 	}
 
 	// Optional: scale raw values
