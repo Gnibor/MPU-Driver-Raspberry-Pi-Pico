@@ -282,12 +282,15 @@ typedef enum {
 
 
 #define GY521_REG_PWR_MGMT_2		0x6C
-#define GY521_STBY_ZG			(1 << 0)
-#define GY521_STBY_YG			(1 << 1)
-#define GY521_STBY_XG			(1 << 2)
-#define GY521_STBY_ZA			(1 << 3)
-#define GY521_STBY_YA			(1 << 4)
-#define GY521_STBY_XA			(1 << 5)
+typedef enum{
+	GY521_STBY_ZG =			(1 << 0),
+	GY521_STBY_YG =			(1 << 1),
+	GY521_STBY_XG =			(1 << 2),
+	GY521_STBY_ZA =			(1 << 3),
+	GY521_STBY_YA =			(1 << 4),
+	GY521_STBY_XA =			(1 << 5)
+} gy521_stby_t;
+
 typedef enum {
 	GY521_LP_WAKE_1_25HZ =		(0 << 6),
 	GY521_LP_WAKE_5HZ  =		(1 << 6),
