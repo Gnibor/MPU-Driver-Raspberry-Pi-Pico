@@ -183,11 +183,11 @@ typedef struct gy521_s{
 	// === Function Pointers ===
 	// =========================
 	struct{
-		bool (*test_connection)(void);
+		bool (*who_am_i)(void);
 		bool (*reset)(void);
 		bool (*sleep)(bool device, bool temp);
 		bool (*read_sensor)(gy521_sensors_t);
-		bool (*fsr)(uint8_t, uint8_t);
+		bool (*fsr)(gy521_fsr_t, gy521_afsr_t);
 		bool (*stby)(void);
 		bool (*smplrt_div)(uint8_t div);
 

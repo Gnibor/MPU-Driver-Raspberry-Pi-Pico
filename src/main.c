@@ -44,7 +44,7 @@ int main(void){
 	bool connected = false;
 	printf("Try connecting GY-521...\n");
 	while(retries--){
-		connected = gy521.fn.test_connection();
+		connected = gy521.fn.who_am_i();
 		if(connected) break;
 
 		printf("Retrying...\n");
