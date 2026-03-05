@@ -245,43 +245,59 @@ bool gy521_calibrate_gyro(uint8_t samples){
 bool gy521_read_sensor(uint8_t sensors){
 	if(!g_gy521) return false;
 	// Read all sensors
-	if(sensors & GY521_ACCEL){
-		if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 6)) return false;
+	if((sensors & GY521_ALL) == GY521_ALL){
+		if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 14)) return false;
 
 		g_gy521->v.accel.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
 		g_gy521->v.accel.raw.y = (g_gy521_cache[2]  << 8) | g_gy521_cache[3];
 		g_gy521->v.accel.raw.z = (g_gy521_cache[4]  << 8) | g_gy521_cache[5];
+		g_gy521->v.temp.raw = (g_gy521_cache[6]  << 8) | g_gy521_cache[7];
+		g_gy521->v.gyro.raw.x = (g_gy521_cache[8]  << 8) | g_gy521_cache[9];
+		g_gy521->v.gyro.raw.y = (g_gy521_cache[10] << 8) | g_gy521_cache[11];
+		g_gy521->v.gyro.raw.z = (g_gy521_cache[12] << 8) | g_gy521_cache[13];
 
-	}
-	if(sensors & GY521_TEMP){
-		if(!gy521_read_register(GY521_REG_TEMP_OUT_H, g_gy521_cache, 2)) return false;
+	// Only accelerometer
+	}else{
+		if(sensors & GY521_ACCEL){
+			if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 6)) return false;
 
-		g_gy521->v.temp.raw = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
+			g_gy521->v.accel.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
+			g_gy521->v.accel.raw.y = (g_gy521_cache[2]  << 8) | g_gy521_cache[3];
+			g_gy521->v.accel.raw.z = (g_gy521_cache[4]  << 8) | g_gy521_cache[5];
 
-	}
-	if(sensors & GY521_GYRO){
-		if(!gy521_read_register(GY521_REG_GYRO_XOUT_H, g_gy521_cache, 6)) return false;
+			// Only temperatur
+		}
+		if(sensors & GY521_TEMP){
+			if(!gy521_read_register(GY521_REG_TEMP_OUT_H, g_gy521_cache, 2)) return false;
 
-		g_gy521->v.gyro.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
-		g_gy521->v.gyro.raw.y = (g_gy521_cache[2] << 8) | g_gy521_cache[3];
-		g_gy521->v.gyro.raw.z = (g_gy521_cache[4] << 8) | g_gy521_cache[5];
+			g_gy521->v.temp.raw = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
+
+			// Only gyroscope
+		}
+		if(sensors & GY521_GYRO){
+			if(!gy521_read_register(GY521_REG_GYRO_XOUT_H, g_gy521_cache, 6)) return false;
+
+			g_gy521->v.gyro.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
+			g_gy521->v.gyro.raw.y = (g_gy521_cache[2] << 8) | g_gy521_cache[3];
+			g_gy521->v.gyro.raw.z = (g_gy521_cache[4] << 8) | g_gy521_cache[5];
+		}
 	}
 
 	// Optional: scale raw values
 	if(sensors & GY521_SCALED){
 		// Raw -> G for accelerometer
-		if((sensors & GY521_ALL) || (sensors & GY521_ACCEL)){
+		if(sensors & GY521_ACCEL){
 			g_gy521->v.accel.g.x = g_gy521->v.accel.raw.x / g_gy521->conf.accel.fsr_divider;
 			g_gy521->v.accel.g.y = g_gy521->v.accel.raw.y / g_gy521->conf.accel.fsr_divider;
 			g_gy521->v.accel.g.z = g_gy521->v.accel.raw.z / g_gy521->conf.accel.fsr_divider;
 		}
 
 		// Raw -> °C
-		if((sensors & GY521_ALL) || (sensors & GY521_TEMP))
+		if(sensors & GY521_TEMP)
 			g_gy521->v.temp.celsius = (g_gy521->v.temp.raw / 340.0f) + 36.53f;
 
 		// Raw -> °/s for gyroscope
-		if((sensors & GY521_ALL) || (sensors & GY521_GYRO)){
+		if(sensors & GY521_GYRO){
 			g_gy521->v.gyro.dps.x = (g_gy521->v.gyro.raw.x - g_gy521->conf.gyro.offset.x) / g_gy521->conf.gyro.fsr_divider;
 			g_gy521->v.gyro.dps.y = (g_gy521->v.gyro.raw.y - g_gy521->conf.gyro.offset.y) / g_gy521->conf.gyro.fsr_divider;
 			g_gy521->v.gyro.dps.z = (g_gy521->v.gyro.raw.z - g_gy521->conf.gyro.offset.z) / g_gy521->conf.gyro.fsr_divider;
