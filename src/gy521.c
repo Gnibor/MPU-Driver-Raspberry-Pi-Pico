@@ -204,6 +204,9 @@ bool gy521_int_pin_cfg(uint8_t cfg){
 	return true;
 }
 
+// ============================
+// === Interrupt pin enable ===
+// ============================
 bool gy521_int_enable(uint8_t cfg){
 	if(!gy521_read_register(GY521_REG_INT_ENABLE, g_gy521_cache, 1)) return false;
 
@@ -218,6 +221,9 @@ bool gy521_int_enable(uint8_t cfg){
 	return true;
 }
 
+// =============================
+// === Read interrupt status ===
+// =============================
 bool gy521_int_status(void){
 	if(!gy521_read_register(GY521_REG_INT_STATUS, g_gy521_cache, 1)) return false;
 
