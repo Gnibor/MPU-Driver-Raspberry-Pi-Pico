@@ -213,5 +213,5 @@ typedef struct gy521_s{
  */
 gy521_s gy521_init(i2c_inst_t *i2c_port, uint8_t addr);
 bool gy521_use(gy521_s *device);
-bool gy521_write_register(uint8_t *data, uint8_t how_many);
+bool gy521_write_register(uint8_t *data, uint8_t how_many, bool block);
 bool gy521_read_reg(uint8_t reg, uint8_t *out, uint8_t how_many);
