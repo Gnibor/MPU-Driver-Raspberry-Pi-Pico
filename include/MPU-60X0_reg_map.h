@@ -296,6 +296,6 @@ typedef enum {
 #define GY521_REG_FIFO_R_W		0x74
 
 #define GY521_REG_WHO_AM_I		0x75
-#define GY521_WHO_AM_I		0x68
+#define GY521_WHO_AM_I			0x68
 
 #endif
