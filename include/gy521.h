@@ -149,10 +149,6 @@ typedef struct gy521_s{
 			int16_t raw; // Raw temperature values
 			float celsius; // Converted temperature in °C
 		} temp;
-
-		struct{
-			bool data_rdy, i2c_mst, fifo_owflow;
-		} interrupt;
 	} v;
 
 	// =====================
