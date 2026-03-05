@@ -41,7 +41,7 @@ bool gy521_who_am_i(void);
 bool gy521_sleep(bool device, bool temp); // Set sleep configuration
 bool gy521_fsr(uint8_t fsr, uint8_t afsr);
 bool gy521_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
-bool gy521_read_sensor(uint8_t sensors); // 0=all 1=accel 2=temp 3=gyro
+bool gy521_read_sensor(gy521_sensors_t sensors); // 0=all 1=accel 2=temp 3=gyro
 bool gy521_int_pin_cfg(void);
 bool gy521_int_enable(void);
 bool gy521_int_status(void);
@@ -242,7 +242,7 @@ bool gy521_calibrate_gyro(uint8_t samples){
 // ===========================================
 // === Read Sensor Data + Optional Scaling ===
 // ===========================================
-bool gy521_read_sensor(uint8_t sensors){
+bool gy521_read_sensor(gy521_sensors_t sensors){
 	if(!g_gy521) return false;
 	// Read all sensors
 	uint8_t mask = (sensors & GY521_ALL);
