@@ -38,8 +38,9 @@
 // === Function prototypes ===
 // ===========================
 bool gy521_who_am_i(void);
+bool gy521_device_reset(void);
 bool gy521_sleep(bool device, bool temp); // Set sleep configuration
-bool gy521_reg_stby(uint8_t stby);
+bool gy521_stby(uint8_t stby);
 bool gy521_fsr(gy521_fsr_t fsr, gy521_afsr_t afsr);
 bool gy521_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
 bool gy521_read_sensor(gy521_sensors_t sensors); // 0=all 1=accel 2=temp 3=gyro
@@ -106,14 +107,15 @@ gy521_s gy521_init(i2c_inst_t *i2c_port, uint8_t addr){
 	if(!addr) gy521.conf.addr = GY521_I2C_ADDR_GND;
 	else gy521.conf.addr = addr;
 
-	gy521.conf.accel.fsr_divider = 131.0f;
-	gy521.conf.gyro.fsr_divider = 16384.0f;
+	gy521.conf.fsr_div.accel = 131.0f;
+	gy521.conf.fsr_div.gyro = 16384.0f;
+	gy521.fn.device_reset = &gy521_device_reset;
 	gy521.fn.sleep = &gy521_sleep;
 	gy521.fn.who_am_i = &gy521_who_am_i;
 	gy521.fn.read_sensor = &gy521_read_sensor;
 	gy521.fn.gyro.calibrate = &gy521_calibrate_gyro;
 	gy521.fn.fsr = &gy521_fsr;
-	gy521.fn.stby = &gy521_reg_stby;
+	gy521.fn.stby = &gy521_stby;
 #if GY521_INT_PIN
 	gy521.fn.interrupt.pin_cfg = &gy521_int_pin_cfg;
 	gy521.fn.interrupt.enable = &gy521_int_enable;
@@ -138,12 +140,12 @@ bool gy521_write_register(uint8_t *data, uint8_t how_many, bool block){
 // =========================
 // === I2C Register Read ===
 // =========================
-bool gy521_read_register(uint8_t reg, uint8_t *out, uint8_t how_many){
+bool gy521_read_register(uint8_t reg, uint8_t *out, uint8_t how_many, bool block){
 	if(!g_gy521) return false;
 
 	if(!gy521_write_register(&reg, 1, true)) return false;
 
-	g_gy521_ret_cache = i2c_read_blocking(GY521_I2C_PORT, g_gy521->conf.addr, out, how_many, false);
+	g_gy521_ret_cache = i2c_read_blocking(GY521_I2C_PORT, g_gy521->conf.addr, out, how_many, block);
 	if(g_gy521_ret_cache != how_many) return false;
 
 	return true;
@@ -153,16 +155,26 @@ bool gy521_read_register(uint8_t reg, uint8_t *out, uint8_t how_many){
 // === Test Connection ===
 // =======================
 bool gy521_who_am_i(void){
-	if(!gy521_read_register(GY521_REG_WHO_AM_I, g_gy521_cache, 1)) return false;
+	if(!gy521_read_register(GY521_REG_WHO_AM_I, g_gy521_cache, 1, false)) return false;
 
 	return g_gy521_cache[0] == GY521_WHO_AM_I ? true : false;
+}
+
+bool gy521_device_reset(void){
+	if(!gy521_read_register(GY521_REG_PWR_MGMT_1, g_gy521_cache, 1, true)) return false;
+
+	g_gy521_cache[0] |= GY521_DEVICE_RESET;
+
+	if(!gy521_write_register((uint8_t[]){GY521_REG_PWR_MGMT_1, g_gy521_cache[0]}, 2, false)) return false;
+
+	return true;
 }
 
 // ==================
 // === Sleep Mode ===
 // ==================
 bool gy521_sleep(bool device, bool temp){
-	if(!gy521_read_register(GY521_REG_PWR_MGMT_1, g_gy521_cache, 1)) return false;
+	if(!gy521_read_register(GY521_REG_PWR_MGMT_1, g_gy521_cache, 1, true)) return false;
 
 	// Sleep Bit
 	if(device) g_gy521_cache[0] |= GY521_SLEEP;
@@ -178,7 +190,7 @@ bool gy521_sleep(bool device, bool temp){
 }
 
 bool gy521_stby(uint8_t stby){
-	if(!gy521_read_register(GY521_REG_PWR_MGMT_2, g_gy521_cache, 1)) return false;
+	if(!gy521_read_register(GY521_REG_PWR_MGMT_2, g_gy521_cache, 1, true)) return false;
 
 	g_gy521_cache[0] &= ~0x3F;
 	g_gy521_cache[0] |= stby;
@@ -193,7 +205,7 @@ bool gy521_stby(uint8_t stby){
 // === Interrupt pin configuration ===
 // ===================================
 bool gy521_int_pin_cfg(uint8_t cfg){
-	if(!gy521_read_register(GY521_REG_INT_PIN_CFG, g_gy521_cache, 1)) return false;
+	if(!gy521_read_register(GY521_REG_INT_PIN_CFG, g_gy521_cache, 1, true)) return false;
 
 	g_gy521_cache[0] &= ~GY521_INT_PIN_CFG_ALL;
 	g_gy521_cache[0] |= cfg;
@@ -208,7 +220,7 @@ bool gy521_int_pin_cfg(uint8_t cfg){
 // === Interrupt pin enable ===
 // ============================
 bool gy521_int_enable(uint8_t cfg){
-	if(!gy521_read_register(GY521_REG_INT_ENABLE, g_gy521_cache, 1)) return false;
+	if(!gy521_read_register(GY521_REG_INT_ENABLE, g_gy521_cache, 1, true)) return false;
 
 	g_gy521_cache[0] &= ~0x19;
 	g_gy521_cache[0] |= cfg;
@@ -225,11 +237,11 @@ bool gy521_int_enable(uint8_t cfg){
 // === Read interrupt status ===
 // =============================
 bool gy521_int_status(void){
-	if(!gy521_read_register(GY521_REG_INT_STATUS, g_gy521_cache, 1)) return false;
+	if(!gy521_read_register(GY521_REG_INT_STATUS, g_gy521_cache, 1, false)) return false;
 
-	if(g_gy521_cache[0] & GY521_DATA_RDY_INT) return true;
-	else if(g_gy521_cache[0] & GY521_I2C_MST_INT) return true;
-	else if(g_gy521_cache[0] & GY521_FIFO_OFLOW_INT) return true;
+	if((g_gy521_cache[0] & GY521_DATA_RDY_INT) ||
+	   (g_gy521_cache[0] & GY521_I2C_MST_INT) ||
+	   (g_gy521_cache[0] & GY521_FIFO_OFLOW_INT)) return true;
 	else return false;
 }
 #endif
@@ -241,7 +253,7 @@ bool gy521_int_status(void){
 bool gy521_fsr(gy521_fsr_t fsr, gy521_afsr_t afsr){
 	if(!g_gy521) return false;
 	// Read FSR Register
-	if(!gy521_read_register(GY521_REG_GYRO_CONFIG, g_gy521_cache, 2)) return false;
+	if(!gy521_read_register(GY521_REG_GYRO_CONFIG, g_gy521_cache, 2, true)) return false;
 	
 	// Gyro FSR bits
 	g_gy521_cache[0] &= ~0x18; // Delete bits 4:3
@@ -249,14 +261,14 @@ bool gy521_fsr(gy521_fsr_t fsr, gy521_afsr_t afsr){
 
 	// Automatic scaling calculation:
 	// 131 / 2^bits → sensitivity in °/s
-	g_gy521->conf.gyro.fsr_divider = 131.0f / (1 << ((fsr >> 3) & 0x03));
+	g_gy521->conf.fsr_div.gyro = 131.0f / (1 << ((fsr >> 3) & 0x03));
 
 	// Accel FSR bits
 	g_gy521_cache[1] &= ~0x18;
 	g_gy521_cache[1] |= afsr;
 
 	// Automatic scaling calculation (raw / divider = G)
-	g_gy521->conf.accel.fsr_divider = 16384.0f / (1 << ((afsr >> 3) & 0x03));
+	g_gy521->conf.fsr_div.accel = 16384.0f / (1 << ((afsr >> 3) & 0x03));
 
 	// Write back to registers
 	if(!gy521_write_register((uint8_t[]){GY521_REG_GYRO_CONFIG, g_gy521_cache[0], g_gy521_cache[1]}, 3, false)) return false;
@@ -276,7 +288,7 @@ bool gy521_calibrate_gyro(uint8_t samples){
 	int64_t sum_gz = 0;
 
 	for (uint8_t i = 0; i < samples; i++){
-		if(!gy521_read_register(GY521_REG_GYRO_XOUT_H, g_gy521_cache, 6)) return false;
+		if(!gy521_read_register(GY521_REG_GYRO_XOUT_H, g_gy521_cache, 6, false)) return false;
 
 		raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
 		raw.y = (g_gy521_cache[2]  << 8) | g_gy521_cache[3];
@@ -290,9 +302,9 @@ bool gy521_calibrate_gyro(uint8_t samples){
 	}
 
 	// Store averages as offsets
-	g_gy521->conf.gyro.offset.x = sum_gx / samples;
-	g_gy521->conf.gyro.offset.y = sum_gy / samples;
-	g_gy521->conf.gyro.offset.z = sum_gz / samples;
+	g_gy521->conf.gyro_offset.x = sum_gx / samples;
+	g_gy521->conf.gyro_offset.y = sum_gy / samples;
+	g_gy521->conf.gyro_offset.z = sum_gz / samples;
 
 	return true;
 }
@@ -306,7 +318,7 @@ bool gy521_read_sensor(gy521_sensors_t sensors){
 	uint8_t mask = (sensors & GY521_ALL);
 	// If to or more sensors are read it reads all for less overhead.
 	if((mask & (mask - 1))){
-		if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 14)) return false;
+		if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 14, false)) return false;
 
 		g_gy521->v.accel.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
 		g_gy521->v.accel.raw.y = (g_gy521_cache[2]  << 8) | g_gy521_cache[3];
@@ -319,7 +331,7 @@ bool gy521_read_sensor(gy521_sensors_t sensors){
 	}else{
 		// Only accelerometer
 		if(mask & GY521_ACCEL){
-			if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 6)) return false;
+			if(!gy521_read_register(GY521_REG_ACCEL_XOUT_H, g_gy521_cache, 6, false)) return false;
 
 			g_gy521->v.accel.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
 			g_gy521->v.accel.raw.y = (g_gy521_cache[2]  << 8) | g_gy521_cache[3];
@@ -328,14 +340,14 @@ bool gy521_read_sensor(gy521_sensors_t sensors){
 		}
 		// Only temperatur
 		if(mask & GY521_TEMP){
-			if(!gy521_read_register(GY521_REG_TEMP_OUT_H, g_gy521_cache, 2)) return false;
+			if(!gy521_read_register(GY521_REG_TEMP_OUT_H, g_gy521_cache, 2, false)) return false;
 
 			g_gy521->v.temp.raw = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
 
 		}
 		// Only gyroscope
 		if(mask & GY521_GYRO){
-			if(!gy521_read_register(GY521_REG_GYRO_XOUT_H, g_gy521_cache, 6)) return false;
+			if(!gy521_read_register(GY521_REG_GYRO_XOUT_H, g_gy521_cache, 6, false)) return false;
 
 			g_gy521->v.gyro.raw.x = (g_gy521_cache[0]  << 8) | g_gy521_cache[1];
 			g_gy521->v.gyro.raw.y = (g_gy521_cache[2] << 8) | g_gy521_cache[3];
@@ -347,18 +359,18 @@ bool gy521_read_sensor(gy521_sensors_t sensors){
 	if(sensors & GY521_SCALED){
 		// Raw -> G for accelerometer
 		if(mask & GY521_ACCEL){
-			g_gy521->v.accel.g.x = g_gy521->v.accel.raw.x / g_gy521->conf.accel.fsr_divider;
-			g_gy521->v.accel.g.y = g_gy521->v.accel.raw.y / g_gy521->conf.accel.fsr_divider;
-			g_gy521->v.accel.g.z = g_gy521->v.accel.raw.z / g_gy521->conf.accel.fsr_divider;
+			g_gy521->v.accel.g.x = g_gy521->v.accel.raw.x / g_gy521->conf.fsr_div.accel;
+			g_gy521->v.accel.g.y = g_gy521->v.accel.raw.y / g_gy521->conf.fsr_div.accel;
+			g_gy521->v.accel.g.z = g_gy521->v.accel.raw.z / g_gy521->conf.fsr_div.accel;
 		}
 		// Raw -> °C
 		if(mask & GY521_TEMP)
 			g_gy521->v.temp.celsius = (g_gy521->v.temp.raw / 340.0f) + 36.53f;
 		// Raw -> °/s for gyroscope
 		if(mask & GY521_GYRO){
-			g_gy521->v.gyro.dps.x = (g_gy521->v.gyro.raw.x - g_gy521->conf.gyro.offset.x) / g_gy521->conf.gyro.fsr_divider;
-			g_gy521->v.gyro.dps.y = (g_gy521->v.gyro.raw.y - g_gy521->conf.gyro.offset.y) / g_gy521->conf.gyro.fsr_divider;
-			g_gy521->v.gyro.dps.z = (g_gy521->v.gyro.raw.z - g_gy521->conf.gyro.offset.z) / g_gy521->conf.gyro.fsr_divider;
+			g_gy521->v.gyro.dps.x = (g_gy521->v.gyro.raw.x - g_gy521->conf.gyro_offset.x) / g_gy521->conf.fsr_div.gyro;
+			g_gy521->v.gyro.dps.y = (g_gy521->v.gyro.raw.y - g_gy521->conf.gyro_offset.y) / g_gy521->conf.fsr_div.gyro;
+			g_gy521->v.gyro.dps.z = (g_gy521->v.gyro.raw.z - g_gy521->conf.gyro_offset.z) / g_gy521->conf.fsr_div.gyro;
 		}
 	}
 

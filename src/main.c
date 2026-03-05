@@ -40,6 +40,7 @@ int main(void){
 	gy521_s gy521 = gy521_init(i2c1, GY521_I2C_ADDR_GND);
 	gy521_use(&gy521);
 
+	if(gy521.fn.device_reset()) printf("__!Device resetted!__\n");
 	int retries = 3;
 	bool connected = false;
 	printf("Try connecting GY-521...\n");
@@ -82,12 +83,13 @@ int main(void){
 
 
 	while(1){
-		if(gy521.fn.interrupt.status())
+		if(gy521.fn.interrupt.status()){
 			if(gy521.fn.read_sensor(GY521_ALL | GY521_SCALED))
 				printf("G=X:%6.3f Y:%6.3f Z:%6.3f | °C=%6.2f | °/s=X:%9.3f Y:%9.3f Z:%9.3f\n", 
 					gy521.v.accel.g.x, gy521.v.accel.g.y, gy521.v.accel.g.z, 
 					gy521.v.temp.celsius, 
 					gy521.v.gyro.dps.x, gy521.v.gyro.dps.y, gy521.v.gyro.dps.z);
+		}
 		sleep_ms(100);
 	}
 }

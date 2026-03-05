@@ -99,14 +99,6 @@ typedef struct{
 } gy521_axis_raw_t;
 
 /*
- * Axis offset as calculated from
- * the calibrate function
- */
-typedef struct{
-	int32_t x, y, z;
-} gy521_offset_t;
-
-/*
  * Scaled axis values
  * - Accel: g-force
  * - Gyro: degrees per second
@@ -116,11 +108,12 @@ typedef struct{
 } gy521_axis_scaled_t;
 
 /*
- * per Axis bool for options
+ * Axis offset as calculated from
+ * the calibrate function
  */
 typedef struct{
-	bool x, y, z;
-} gy521_axis_bool_t;
+	int32_t x, y, z;
+} gy521_offset_t;
 
 /*
  * Main device structure
@@ -159,17 +152,11 @@ typedef struct gy521_s{
 		uint8_t addr; // Device Address
 		uint8_t *cache;
 		uint8_t clksel;
-		
-		struct{
-			uint8_t fsr;
-			float fsr_divider;
-		} accel;
+		gy521_offset_t gyro_offset;
 
 		struct{
-			uint8_t fsr;
-			float fsr_divider;
-			gy521_offset_t offset;
-		} gyro;
+			float accel, gyro;
+		} fsr_div;
 	} conf;
 
 	// =========================
@@ -183,6 +170,7 @@ typedef struct gy521_s{
 		bool (*fsr)(gy521_fsr_t, gy521_afsr_t);
 		bool (*stby)(uint8_t);
 		bool (*smplrt_div)(uint8_t div);
+		bool (*device_reset)(void);
 
 		struct{
 			bool (*calibrate)(uint8_t);
@@ -207,4 +195,4 @@ typedef struct gy521_s{
 gy521_s gy521_init(i2c_inst_t *i2c_port, uint8_t addr);
 bool gy521_use(gy521_s *device);
 bool gy521_write_register(uint8_t *data, uint8_t how_many, bool block);
-bool gy521_read_reg(uint8_t reg, uint8_t *out, uint8_t how_many);
+bool gy521_read_reg(uint8_t reg, uint8_t *out, uint8_t how_many, bool block);
