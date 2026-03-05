@@ -287,18 +287,18 @@ bool gy521_read_sensor(uint8_t sensors){
 	// Optional: scale raw values
 	if(sensors & GY521_SCALED){
 		// Raw -> G for accelerometer
-		if(sensors & GY521_ACCEL){
+		if(mask & GY521_ACCEL){
 			g_gy521->v.accel.g.x = g_gy521->v.accel.raw.x / g_gy521->conf.accel.fsr_divider;
 			g_gy521->v.accel.g.y = g_gy521->v.accel.raw.y / g_gy521->conf.accel.fsr_divider;
 			g_gy521->v.accel.g.z = g_gy521->v.accel.raw.z / g_gy521->conf.accel.fsr_divider;
 		}
 
 		// Raw -> °C
-		if(sensors & GY521_TEMP)
+		if(mask & GY521_TEMP)
 			g_gy521->v.temp.celsius = (g_gy521->v.temp.raw / 340.0f) + 36.53f;
 
 		// Raw -> °/s for gyroscope
-		if(sensors & GY521_GYRO){
+		if(mask & GY521_GYRO){
 			g_gy521->v.gyro.dps.x = (g_gy521->v.gyro.raw.x - g_gy521->conf.gyro.offset.x) / g_gy521->conf.gyro.fsr_divider;
 			g_gy521->v.gyro.dps.y = (g_gy521->v.gyro.raw.y - g_gy521->conf.gyro.offset.y) / g_gy521->conf.gyro.fsr_divider;
 			g_gy521->v.gyro.dps.z = (g_gy521->v.gyro.raw.z - g_gy521->conf.gyro.offset.z) / g_gy521->conf.gyro.fsr_divider;
