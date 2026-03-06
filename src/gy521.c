@@ -60,7 +60,7 @@ void gy521_irq_handler(uint gpio, uint32_t events){
 // === Set device to use ===
 // =========================
 // to set device as used device for fn.*
-bool gy521_use(gy521_s *device){
+bool gy521_use_struct(gy521_s *device){
 	if (device == NULL) return false; // Check if device is set
 
 	g_gy521 = device;
@@ -98,19 +98,6 @@ gy521_s gy521_init(i2c_inst_t *i2c_port, uint8_t addr){
 
 	gy521.conf.fsr_div.accel = 16384.0f;
 	gy521.conf.fsr_div.gyro = 131.0f;
-	gy521.fn.device_reset = &gy521_device_reset;
-	gy521.fn.sleep = &gy521_sleep;
-	gy521.fn.cycle = &gy521_cycle_mode;
-	gy521.fn.who_am_i = &gy521_who_am_i;
-	gy521.fn.read_sensor = &gy521_read_sensor;
-	gy521.fn.gyro_calibrate = &gy521_calibrate_gyro;
-	gy521.fn.fsr = &gy521_fsr;
-	gy521.fn.stby = &gy521_stby;
-#if GY521_INT_PIN
-	gy521.fn.interrupt.pin_cfg = &gy521_int_pin_cfg;
-	gy521.fn.interrupt.enable = &gy521_int_enable;
-	gy521.fn.interrupt.status = &gy521_int_status;
-#endif
 
 	return gy521;
 }
