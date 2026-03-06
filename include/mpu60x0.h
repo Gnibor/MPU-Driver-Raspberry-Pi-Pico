@@ -1,10 +1,10 @@
 /*
  * ================================================================
- *  Project:      GY-521 (MPU-6050) Driver for RP2040
+ *  Project:      MPU-60X0 Driver for Raspberry Pi Pico
  *  File:         mpu60x0.h
  *  Author:       (Gnibor) Robin Gerhartz
  *  License:      MIT License
- *  Repository:   https://github.com/Gnibor/mpu60x0_rp2040
+ *  Repository:   https://github.com/Gnibor/MPU60X0_RaspberryPi_Pico
  * ================================================================
  *
  *  MIT License
@@ -33,16 +33,16 @@
  *
  * ================================================================
  *
- *  Public API for the GY-521 (MPU-6050) driver.
+ *  Public API for the MPU-60X0 driver.
  *
  * ================================================================
  */
-#pragma once
+#ifndef MPU60X0_H
+#define MPU60X0_H
+
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
-#include <stdint.h>
-#include <sys/types.h>
-#include "MPU-60X0_reg_map.h"
+#include "MPU60X0_reg_map.h"
 
 // =============================
 // === Configurable Hardware ===
@@ -171,13 +171,13 @@ mpu_s mpu_init(i2c_inst_t *i2c_port, uint8_t addr);
 bool mpu_use_struct(mpu_s *device);
 bool mpu_write_register(uint8_t *data, uint8_t how_many, bool block);
 bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many, bool block);
-bool mpu_dlpf_cfg(mpu60x0_dlpf_cfg_t cfg);
+bool mpu_dlpf_cfg(mpu_dlpf_cfg_t cfg);
 bool mpu_who_am_i(void);
 bool mpu_device_reset(void);
 bool mpu_sleep(mpu_sleep_t sleep); // Set sleep configuration
 bool mpu_stby(uint8_t stby);
 bool mpu_cycle_mode(mpu_cycle_t mode, uint8_t smplrt_wake);
-bool mpu_fsr(mpu60x0_fsr_t fsr, mpu60x0_afsr_t afsr);
+bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr);
 bool mpu_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
 bool mpu_read_sensor(mpu_sensors_t sensors); // 0=all 1=accel 2=temp 3=gyro
 #if MPU_INT_PIN
@@ -185,4 +185,5 @@ void mpu_irq_handler(uint gpio, uint32_t events);
 bool mpu_int_pin_cfg(uint8_t cfg);
 bool mpu_int_enable(uint8_t cfg);
 bool mpu_int_status(void);
+#endif
 #endif

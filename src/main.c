@@ -34,7 +34,7 @@
 
 #include "default.h"
 #include "mpu60x0.h"
-#include "MPU-60X0_reg_map.h"
+#include "MPU60X0_reg_map.h"
 
 int main(void){
 	stdio_init_board();
@@ -60,7 +60,7 @@ int main(void){
 	else printf("sleep is deactivated!\n");
 	sleep_ms(10);
 
-	if(!mpu_fsr(MPU60X0_FSR_500DPS, MPU60X0_AFSR_2G)) printf("Could not set the SFR/AFSR\n");
+	if(!mpu_fsr(MPU_FSR_500DPS, MPU_AFSR_2G)) printf("Could not set the SFR/AFSR\n");
 	else printf("FSR=2000dps, AFSR=8g\n");
 
 	printf("Try to calibrate GY-521\n");
@@ -68,7 +68,7 @@ int main(void){
 	if(mpu_calibrate_gyro(10)) printf("GY-521 gyro is now calibrated.\n");
 	else printf("GY-521 gyro could not be calibrated.\n");
 
-	mpu_dlpf_cfg(MPU60X0_DLPF_CFG_260HZ);
+	mpu_dlpf_cfg(MPU_DLPF_CFG_260HZ);
 
 	printf("how big is the struct: %dbytes\n", sizeof(mpu));
 
@@ -83,7 +83,7 @@ int main(void){
 		MPU60X0_INT_RD_CLEAR     // Interrupt cleared by reading the fn.interrupt.status()
 	);*/
 
-	if(mpu_cycle_mode(MPU_CYCLE_ON, MPU60X0_SMPLRT_1KHZ)) printf("Enable Cycle mode!!!\n");
+	if(mpu_cycle_mode(MPU_CYCLE_ON, MPU_SMPLRT_1KHZ)) printf("Enable Cycle mode!!!\n");
 	else printf("Could not enable Cycle mode!!!\n");
 	sleep_ms(10);
 

@@ -1,10 +1,10 @@
 /*
  * ================================================================
- *  Project:      GY-521 (MPU-6050) Driver for RP2040
+ *  Project:      MPU-60X0 Driver for Raspberry Pi Pico
  *  File:         mpu60x0.c
  *  Author:       (Gnibor) Robin Gerhartz
  *  License:      MIT License
- *  Repository:   https://github.com/Gnibor/mpu60x0_rp2040
+ *  Repository:   https://github.com/Gnibor/MPU60X0_RaspberryPi_Pico
  * ================================================================
  *
  *  Description:
@@ -18,6 +18,8 @@
  *  - Automatic scaling (raw -> physical units)
  *  - Gyroscope zero-point calibration
  *  - Power management features
+ *  - Timing management features (!!!CYCLE Still Work In Progress!!!)
+ *  - Interrupt configuration and status check (!!!Work In Progress!!!)
  *
  *  The driver is written in a lightweight embedded style
  *  and uses function pointers inside a device structure
@@ -27,11 +29,8 @@
  */
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
-#include <stdio.h>
-#include "MPU-60X0_reg_map.h"
+#include "MPU60X0_reg_map.h"
 #include "mpu60x0.h"
 
 // ===========================
@@ -41,7 +40,7 @@
 // ========================
 // === Global Variables ===
 // ========================
-static mpu_s *g_mpu = NULL; // Global pointer to the aktiv MPU60X0-Device
+static mpu_s *g_mpu = NULL; // Global pointer to the aktiv MPU-Device
 static uint8_t g_mpu_cache[14] = {0}; // Temporary buffer for I2C reads
 static int g_mpu_ret_cache = 0; // Temporary buffer for return values
 
@@ -61,7 +60,7 @@ bool mpu_use_struct(mpu_s *device){
 }
 
 // ==========================
-// === Initialize MPU60X0 ===
+// === Initialize MPU ===
 // ==========================
 mpu_s mpu_init(i2c_inst_t *i2c_port, uint8_t addr){
 	i2c_init(MPU_I2C_PORT, 400 * 1000); // 400 kHz I2C
@@ -114,7 +113,7 @@ bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many, bool block){
 
 	if(!mpu_write_register(&reg, 1, true)) return false;
 
-	g_mpu_ret_cache = i2c_read_blocking(MPU_I2C_PORT, g_mpu->conf.addr, out, how_many, block);
+	g_mpu_ret_cache = i2c_read_blocking(g_mpu->conf.i2c_port, g_mpu->conf.addr, out, how_many, block);
 	if(g_mpu_ret_cache != how_many) return false;
 
 	return true;
@@ -124,17 +123,17 @@ bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many, bool block){
 // === Test Connection ===
 // =======================
 bool mpu_who_am_i(void){
-	if(!mpu_read_register(MPU60X0_REG_WHO_AM_I, g_mpu_cache, 1, false)) return false;
+	if(!mpu_read_register(MPU_REG_WHO_AM_I, g_mpu_cache, 1, false)) return false;
 
-	return g_mpu_cache[0] == MPU60X0_WHO_AM_I ? true : false;
+	return g_mpu_cache[0] == MPU_WHO_AM_I ? true : false;
 }
 
 bool mpu_device_reset(void){
-	if(!mpu_read_register(MPU60X0_REG_PWR_MGMT_1, g_mpu_cache, 1, true)) return false;
+	if(!mpu_read_register(MPU_REG_PWR_MGMT_1, g_mpu_cache, 1, true)) return false;
 
-	g_mpu_cache[0] |= MPU60X0_DEVICE_RESET;
+	g_mpu_cache[0] |= MPU_DEVICE_RESET;
 
-	if(!mpu_write_register((uint8_t[]){MPU60X0_REG_PWR_MGMT_1, g_mpu_cache[0]}, 2, false)) return false;
+	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, g_mpu_cache[0]}, 2, false)) return false;
 
 	sleep_ms(50); // Needed time for the reset
 
@@ -145,17 +144,17 @@ bool mpu_device_reset(void){
 // === Sleep Mode ===
 // ==================
 bool mpu_sleep(mpu_sleep_t sleep){
-	if(!mpu_read_register(MPU60X0_REG_PWR_MGMT_1, g_mpu_cache, 1, true)) return false;
+	if(!mpu_read_register(MPU_REG_PWR_MGMT_1, g_mpu_cache, 1, true)) return false;
 
 	// Sleep Bit
-	if(sleep & MPU_SLEEP_DEVICE_ON) g_mpu_cache[0] |= MPU60X0_SLEEP;
-	else if(!(sleep & (MPU_SLEEP_DEVICE_ON << 1))) g_mpu_cache[0] &= ~MPU60X0_SLEEP;
+	if(sleep & MPU_SLEEP_DEVICE_ON) g_mpu_cache[0] |= MPU_SLEEP;
+	else if(!(sleep & (MPU_SLEEP_DEVICE_ON << 1))) g_mpu_cache[0] &= ~MPU_SLEEP;
 
 	// Temperature disable Bit
-	if(sleep & MPU_SLEEP_TEMP_ON) g_mpu_cache[0] |= MPU60X0_TEMP_DIS;
-	else if(!(sleep & (MPU_SLEEP_TEMP_ON << 2))) g_mpu_cache[0] &= ~MPU60X0_TEMP_DIS;
+	if(sleep & MPU_SLEEP_TEMP_ON) g_mpu_cache[0] |= MPU_TEMP_DIS;
+	else if(!(sleep & (MPU_SLEEP_TEMP_ON << 2))) g_mpu_cache[0] &= ~MPU_TEMP_DIS;
 
-	if(!mpu_write_register((uint8_t[]){MPU60X0_REG_PWR_MGMT_1, g_mpu_cache[0]}, 2, false)) return false;
+	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, g_mpu_cache[0]}, 2, false)) return false;
 
 	sleep_ms(10); // Activation pause
 
@@ -185,33 +184,33 @@ bool mpu_sleep(mpu_sleep_t sleep){
  */
 bool mpu_cycle_mode(mpu_cycle_t mode, uint8_t smplrt_wake){
 	// Read current power management registers (PWR_MGMT_1 and PWR_MGMT_2)
-	if(!mpu_read_register(MPU60X0_REG_PWR_MGMT_1, g_mpu_cache, 2, true)) return false;
+	if(!mpu_read_register(MPU_REG_PWR_MGMT_1, g_mpu_cache, 2, true)) return false;
 
 	// Enable or disable cycle mode
 	if(mode == MPU_CYCLE_ON || mode == MPU_CYCLE_LP){
-		g_mpu_cache[0] |= MPU60X0_CYCLE;
+		g_mpu_cache[0] |= MPU_CYCLE;
 
 		// Standard cycle mode: set sample rate divider
 		if(mode != MPU_CYCLE_LP){
 			// smplrt_wake = divider for wake-up frequency: freq = 1 kHz / (divider + 1)
-			if(!mpu_write_register((uint8_t[]){MPU60X0_REG_SMPLRT_DIV, smplrt_wake}, 2, true)) return false;
+			if(!mpu_write_register((uint8_t[]){MPU_REG_SMPLRT_DIV, smplrt_wake}, 2, true)) return false;
 		// Low-power cycle mode
 		}else if(mode == MPU_CYCLE_LP){
-			g_mpu_cache[0] |= MPU60X0_SLEEP; // Put device in sleep, accelerometer wakes up periodically
+			g_mpu_cache[0] |= MPU_SLEEP; // Put device in sleep, accelerometer wakes up periodically
 
-			g_mpu_cache[1] &= ~MPU60X0_LP_WAKE_40HZ; // Clear previous wake-up frequency bits
+			g_mpu_cache[1] &= ~MPU_LP_WAKE_40HZ; // Clear previous wake-up frequency bits
 			//g_mpu_cache[1] |= smplrt_wake;  // Set new low-power wake-up frequency
-			g_mpu_cache[1] |= MPU60X0_STBY_GYRO; // Keep gyro in standby during LP cycle
+			g_mpu_cache[1] |= MPU_STBY_GYRO; // Keep gyro in standby during LP cycle
 		}
 	}else{
-		g_mpu_cache[0] &= ~MPU60X0_CYCLE;  // Clear CYCLE bit
-		g_mpu_cache[0] &= ~MPU60X0_SLEEP;
-		g_mpu_cache[1] &= ~MPU60X0_LP_WAKE_40HZ; // Clear LP wake frequency bits
-		g_mpu_cache[1] &= ~MPU60X0_STBY_GYRO; // Reactivate gyro if it was in standby
+		g_mpu_cache[0] &= ~MPU_CYCLE;  // Clear CYCLE bit
+		g_mpu_cache[0] &= ~MPU_SLEEP;
+		g_mpu_cache[1] &= ~MPU_LP_WAKE_40HZ; // Clear LP wake frequency bits
+		g_mpu_cache[1] &= ~MPU_STBY_GYRO; // Reactivate gyro if it was in standby
 	}
 
 	// Write back updated registers
-	if(!mpu_write_register((uint8_t[]){MPU60X0_REG_PWR_MGMT_1, g_mpu_cache[0], g_mpu_cache[1]}, 3, false)) return false;
+	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, g_mpu_cache[0], g_mpu_cache[1]}, 3, false)) return false;
 
 	sleep_ms(10); // Activation pause
 
@@ -222,12 +221,12 @@ bool mpu_cycle_mode(mpu_cycle_t mode, uint8_t smplrt_wake){
 // === Stand-By Mode ===
 // =====================
 bool mpu_stby(uint8_t stby){
-	if(!mpu_read_register(MPU60X0_REG_PWR_MGMT_2, g_mpu_cache, 1, true)) return false;
+	if(!mpu_read_register(MPU_REG_PWR_MGMT_2, g_mpu_cache, 1, true)) return false;
 
-	g_mpu_cache[0] &= ~MPU60X0_STBY_ALL;
+	g_mpu_cache[0] &= ~MPU_STBY_ALL;
 	g_mpu_cache[0] |= stby;
 
-	if(!mpu_write_register((uint8_t[]){MPU60X0_REG_PWR_MGMT_2, g_mpu_cache[0]}, 2, false)) return false;
+	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_2, g_mpu_cache[0]}, 2, false)) return false;
 
 	return true;
 }
@@ -235,13 +234,13 @@ bool mpu_stby(uint8_t stby){
 // ==========================
 // === DLPF configuration ===
 // ==========================
-bool mpu_dlpf_cfg(mpu60x0_dlpf_cfg_t cfg){
-	if(!mpu_read_register(MPU60X0_REG_CONFIG, g_mpu_cache, 1, true)) return false;
+bool mpu_dlpf_cfg(mpu_dlpf_cfg_t cfg){
+	if(!mpu_read_register(MPU_REG_CONFIG, g_mpu_cache, 1, true)) return false;
 
-	g_mpu_cache[0] &= ~MPU60X0_DLPF_CFG_3600HZ;
+	g_mpu_cache[0] &= ~MPU_DLPF_CFG_3600HZ;
 	g_mpu_cache[0] |= cfg;
 
-	if(!mpu_write_register((uint8_t[]){MPU60X0_REG_CONFIG, g_mpu_cache[0]}, 2, false)) return false;
+	if(!mpu_write_register((uint8_t[]){MPU_REG_CONFIG, g_mpu_cache[0]}, 2, false)) return false;
 
 	return true;
 }
@@ -250,12 +249,12 @@ bool mpu_dlpf_cfg(mpu60x0_dlpf_cfg_t cfg){
 // ===  Set Full-Scale Range (FSR) ===
 // === & Calculate Scaling Factors ===
 // ===================================
-bool mpu_fsr(mpu60x0_fsr_t fsr, mpu60x0_afsr_t afsr){
+bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr){
 	// Read FSR Register
-	if(!mpu_read_register(MPU60X0_REG_GYRO_CONFIG, g_mpu_cache, 2, true)) return false;
+	if(!mpu_read_register(MPU_REG_GYRO_CONFIG, g_mpu_cache, 2, true)) return false;
 	
 	// Gyro FSR bits
-	g_mpu_cache[0] &= ~MPU60X0_FSR_2000DPS; // Delete bits 4:3
+	g_mpu_cache[0] &= ~MPU_FSR_2000DPS; // Delete bits 4:3
 	g_mpu_cache[0] |= fsr; // Set FSR Bits
 
 	// Automatic scaling calculation:
@@ -263,14 +262,14 @@ bool mpu_fsr(mpu60x0_fsr_t fsr, mpu60x0_afsr_t afsr){
 	g_mpu->conf.fsr_div.gyro = 131.0f / (1 << ((fsr >> 3) & 0x03));
 
 	// Accel FSR bits
-	g_mpu_cache[1] &= ~MPU60X0_AFSR_16G;
+	g_mpu_cache[1] &= ~MPU_AFSR_16G;
 	g_mpu_cache[1] |= afsr;
 
 	// Automatic scaling calculation (raw / divider = G)
 	g_mpu->conf.fsr_div.accel = 16384.0f / (1 << ((afsr >> 3) & 0x03));
 
 	// Write back to registers
-	if(!mpu_write_register((uint8_t[]){MPU60X0_REG_GYRO_CONFIG, g_mpu_cache[0], g_mpu_cache[1]}, 3, false)) return false;
+	if(!mpu_write_register((uint8_t[]){MPU_REG_GYRO_CONFIG, g_mpu_cache[0], g_mpu_cache[1]}, 3, false)) return false;
 
 	return true;
 }
@@ -286,7 +285,7 @@ bool mpu_calibrate_gyro(uint8_t samples){
 	int64_t sum_gz = 0;
 
 	for(uint8_t i = 0; i < samples; i++){
-		if(!mpu_read_register(MPU60X0_REG_GYRO_XOUT_H, g_mpu_cache, 6, false)) return false;
+		if(!mpu_read_register(MPU_REG_GYRO_XOUT_H, g_mpu_cache, 6, false)) return false;
 
 		g_mpu->v.gyro.raw.x = (g_mpu_cache[0]  << 8) | g_mpu_cache[1];
 		g_mpu->v.gyro.raw.y = (g_mpu_cache[2]  << 8) | g_mpu_cache[3];
@@ -316,7 +315,7 @@ bool mpu_read_sensor(mpu_sensors_t sensors){
 	uint8_t mask = (sensors & MPU_ALL);
 	// If to or more sensors are read it reads all for less overhead.
 	if((mask & (mask - 1))){
-		if(!mpu_read_register(MPU60X0_REG_ACCEL_XOUT_H, g_mpu_cache, 14, false)) return false;
+		if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, g_mpu_cache, 14, false)) return false;
 
 		g_mpu->v.accel.raw.x = (g_mpu_cache[0]  << 8) | g_mpu_cache[1];
 		g_mpu->v.accel.raw.y = (g_mpu_cache[2]  << 8) | g_mpu_cache[3];
@@ -329,7 +328,7 @@ bool mpu_read_sensor(mpu_sensors_t sensors){
 	}else{
 		// Only accelerometer
 		if(mask & MPU_ACCEL){
-			if(!mpu_read_register(MPU60X0_REG_ACCEL_XOUT_H, g_mpu_cache, 6, false)) return false;
+			if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, g_mpu_cache, 6, false)) return false;
 
 			g_mpu->v.accel.raw.x = (g_mpu_cache[0]  << 8) | g_mpu_cache[1];
 			g_mpu->v.accel.raw.y = (g_mpu_cache[2]  << 8) | g_mpu_cache[3];
@@ -338,14 +337,14 @@ bool mpu_read_sensor(mpu_sensors_t sensors){
 		}
 		// Only temperatur
 		if(mask & MPU_TEMP){
-			if(!mpu_read_register(MPU60X0_REG_TEMP_OUT_H, g_mpu_cache, 2, false)) return false;
+			if(!mpu_read_register(MPU_REG_TEMP_OUT_H, g_mpu_cache, 2, false)) return false;
 
 			g_mpu->v.temp.raw = (g_mpu_cache[0]  << 8) | g_mpu_cache[1];
 
 		}
 		// Only gyroscope
 		if(mask & MPU_GYRO){
-			if(!mpu_read_register(MPU60X0_REG_GYRO_XOUT_H, g_mpu_cache, 6, false)) return false;
+			if(!mpu_read_register(MPU_REG_GYRO_XOUT_H, g_mpu_cache, 6, false)) return false;
 
 			g_mpu->v.gyro.raw.x = (g_mpu_cache[0]  << 8) | g_mpu_cache[1];
 			g_mpu->v.gyro.raw.y = (g_mpu_cache[2] << 8) | g_mpu_cache[3];
@@ -388,13 +387,13 @@ void mpu_irq_handler(uint gpio, uint32_t events){
 // === Interrupt pin configuration === !!!Still work in progress!!!
 // ===================================
 bool mpu_int_pin_cfg(uint8_t cfg){
-	if(!mpu_read_register(MPU60X0_REG_INT_PIN_CFG, g_mpu_cache, 1, true)) return false;
+	if(!mpu_read_register(MPU_REG_INT_PIN_CFG, g_mpu_cache, 1, true)) return false;
 
-	g_mpu_cache[0] &= ~MPU60X0_INT_PIN_CFG_ALL;
+	g_mpu_cache[0] &= ~MPU_INT_PIN_CFG_ALL;
 	g_mpu_cache[0] |= cfg;
 
 	// Write back to registers
-	if(!mpu_write_register((uint8_t[]){MPU60X0_REG_INT_PIN_CFG, g_mpu_cache[0]}, 2, false)) return false;
+	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_PIN_CFG, g_mpu_cache[0]}, 2, false)) return false;
 
 	return true;
 }
@@ -403,13 +402,13 @@ bool mpu_int_pin_cfg(uint8_t cfg){
 // === Interrupt pin enable === !!!Still work in progress!!!
 // ============================
 bool mpu_int_enable(uint8_t cfg){
-	if(!mpu_read_register(MPU60X0_REG_INT_ENABLE, g_mpu_cache, 1, true)) return false;
+	if(!mpu_read_register(MPU_REG_INT_ENABLE, g_mpu_cache, 1, true)) return false;
 
-	g_mpu_cache[0] &= ~MPU60X0_INT_PIN_CFG_ALL;
+	g_mpu_cache[0] &= ~MPU_INT_PIN_CFG_ALL;
 	g_mpu_cache[0] |= cfg;
 
 	// Write back to registers
-	if(!mpu_write_register((uint8_t[]){MPU60X0_REG_INT_ENABLE, g_mpu_cache[0]}, 2, false)) return false;
+	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_ENABLE, g_mpu_cache[0]}, 2, false)) return false;
 
 
 	return true;
@@ -419,11 +418,11 @@ bool mpu_int_enable(uint8_t cfg){
 // === Read interrupt status === !!!Still work in progress!!!
 // =============================
 bool mpu_int_status(void){
-	if(!mpu_read_register(MPU60X0_REG_INT_STATUS, g_mpu_cache, 1, false)) return false;
+	if(!mpu_read_register(MPU_REG_INT_STATUS, g_mpu_cache, 1, false)) return false;
 
-	if((g_mpu_cache[0] & MPU60X0_DATA_RDY_INT) ||
-	   (g_mpu_cache[0] & MPU60X0_I2C_MST_INT) ||
-	   (g_mpu_cache[0] & MPU60X0_FIFO_OFLOW_INT)) return true;
+	if((g_mpu_cache[0] & MPU_DATA_RDY_INT) ||
+	   (g_mpu_cache[0] & MPU_I2C_MST_INT) ||
+	   (g_mpu_cache[0] & MPU_FIFO_OFLOW_INT)) return true;
 	else return false;
 }
 #endif
