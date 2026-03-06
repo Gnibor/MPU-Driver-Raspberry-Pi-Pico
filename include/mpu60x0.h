@@ -1,10 +1,10 @@
 /*
  * ================================================================
  *  Project:      GY-521 (MPU-6050) Driver for RP2040
- *  File:         gy521.h
+ *  File:         mpu60x0.h
  *  Author:       (Gnibor) Robin Gerhartz
  *  License:      MIT License
- *  Repository:   https://github.com/Gnibor/gy521_rp2040
+ *  Repository:   https://github.com/Gnibor/mpu60x0_rp2040
  * ================================================================
  *
  *  MIT License
@@ -47,71 +47,71 @@
 // =============================
 // === Configurable Hardware ===
 // =============================
-#ifndef GY521_I2C_PORT
-#define GY521_I2C_PORT i2c1 // Default I2C port
+#ifndef MPU60X0_I2C_PORT
+#define MPU60X0_I2C_PORT i2c1 // Default I2C port
 #endif
 
-#ifndef GY521_SDA_PIN
-#define GY521_SDA_PIN 6    // Default SDA pin (can be overridden)
+#ifndef MPU60X0_SDA_PIN
+#define MPU60X0_SDA_PIN 6    // Default SDA pin (can be overridden)
 #endif
 
-#ifndef GY521_SCL_PIN
-#define GY521_SCL_PIN 7   // Default SCL pin (can be overridden)
+#ifndef MPU60X0_SCL_PIN
+#define MPU60X0_SCL_PIN 7   // Default SCL pin (can be overridden)
 #endif
 
-#ifndef GY521_USE_PULLUP
-#define GY521_USE_PULLUP 1 // 1 = enable internal pull-up, 0 = disabled
+#ifndef MPU60X0_USE_PULLUP
+#define MPU60X0_USE_PULLUP 1 // 1 = enable internal pull-up, 0 = disabled
 #endif
 
-#ifndef GY521_INT_PIN
-#define GY521_INT_PIN 26  // Optional interrupt pin (0 and the interrupt parts are not loaded)
+#ifndef MPU60X0_INT_PIN
+#define MPU60X0_INT_PIN 26  // Optional interrupt pin (0 and the interrupt parts are not loaded)
 #endif
 
-#ifndef GY521_INT_PULLUP
-#define GY521_INT_PULLUP 0
+#ifndef MPU60X0_INT_PULLUP
+#define MPU60X0_INT_PULLUP 0
 #endif
 
-#define GY521_I2C_ADDR_GND 0x68 // Default I2C address for GY-521(MPU-6050) (AD0 pin -> Gnd)
-#define GY521_I2C_ADDR_VCC 0x69 // Default I2C address for GY-521(MPU-6050) (AD0 pin -> Vcc)
+#define MPU60X0_I2C_ADDR_GND 0x68 // Default I2C address for GY-521(MPU-6050) (AD0 pin -> Gnd)
+#define MPU60X0_I2C_ADDR_VCC 0x69 // Default I2C address for GY-521(MPU-6050) (AD0 pin -> Vcc)
 
 
 /*
  * Identifiers for selecting specific sensor blocks
- * Used in gy521_read()
+ * Used in mpu_read()
  */
 typedef enum{
-	GY521_ACCEL = (1 << 0),
-	GY521_TEMP = (1 << 1),
-	GY521_GYRO = (1 << 2),
-	GY521_ALL = (GY521_ACCEL | GY521_TEMP | GY521_GYRO),
-	GY521_SCALED = (1 << 3)
-} gy521_sensors_t;
+	MPU_ACCEL = (1 << 0),
+	MPU_TEMP = (1 << 1),
+	MPU_GYRO = (1 << 2),
+	MPU_ALL = (MPU_ACCEL | MPU_TEMP | MPU_GYRO),
+	MPU_SCALED = (1 << 3)
+} mpu_sensors_t;
 
 /*
  * Identifiers for selecting differrent function options
- * Used in gy521_dlpf_cfg()
+ * Used in mpu_dlpf_cfg()
  */
 typedef enum{
-	GY521_CYCLE_LP  = 2,
-	GY521_CYCLE_ON  = 1,
-	GY521_CYCLE_OFF = 0
-} gy521_cycle_t;
+	MPU_CYCLE_LP  = 2,
+	MPU_CYCLE_ON  = 1,
+	MPU_CYCLE_OFF = 0
+} mpu_cycle_t;
 
 /*
- * Used in gy521_sleep()
+ * Used in mpu_sleep()
  */
 typedef enum{
-	GY521_SLEEP_DEVICE_ON	= (1 << 0),
-	GY521_SLEEP_DEVICE_OFF	= (0 << 0),
-	GY521_SLEEP_TEMP_ON	= (1 << 1),
-	GY521_SLEEP_TEMP_OFF	= (0 << 1),
-	GY521_SLEEP_ALL_OFF	= 0
-} gy521_sleep_t;
+	MPU_SLEEP_DEVICE_ON	= (1 << 0),
+	MPU_SLEEP_DEVICE_OFF	= (0 << 0),
+	MPU_SLEEP_TEMP_ON	= (1 << 1),
+	MPU_SLEEP_TEMP_OFF	= (0 << 1),
+	MPU_SLEEP_ALL_OFF	= 0
+} mpu_sleep_t;
 
 // ========================
 // === Global Variables ===
 // ========================
-extern volatile bool g_gy521_int_flag;
+extern volatile bool g_mpu_int_flag;
 
 // =======================
 // === Data Structures ===
@@ -122,7 +122,7 @@ extern volatile bool g_gy521_int_flag;
  */
 typedef struct{
 	int16_t x,y,z;
-} gy521_axis_raw_t;
+} mpu_axis_raw_t;
 
 /*
  * Scaled axis values
@@ -131,7 +131,7 @@ typedef struct{
  */
 typedef struct{
 	float x,y,z;
-} gy521_axis_scaled_t;
+} mpu_axis_scaled_t;
 
 /*
  * Axis offset as calculated from
@@ -139,7 +139,7 @@ typedef struct{
  */
 typedef struct{
 	int32_t x, y, z;
-} gy521_offset_t;
+} mpu_offset_t;
 
 /*
  * Main device structure
@@ -149,19 +149,19 @@ typedef struct{
  * - Configuration state
  * - Function pointers (pseudo OOP style)
  */
-typedef struct gy521_s{
+typedef struct mpu_s{
 	// =====================
 	// === Sensor Values ===
 	// =====================
 	struct{
 		struct{
-			gy521_axis_raw_t raw; // Raw accelerometer values
-			gy521_axis_scaled_t g; // Converted acceleration in G
+			mpu_axis_raw_t raw; // Raw accelerometer values
+			mpu_axis_scaled_t g; // Converted acceleration in G
 		} accel;
 
 		struct{
-			gy521_axis_raw_t raw; // Raw gyro values
-			gy521_axis_scaled_t dps; // Converted gyro in °/s
+			mpu_axis_raw_t raw; // Raw gyro values
+			mpu_axis_scaled_t dps; // Converted gyro in °/s
 		} gyro;
 
 		struct{
@@ -178,38 +178,38 @@ typedef struct gy521_s{
 		uint8_t addr; // Device Address
 		uint8_t *cache;
 		uint8_t clksel;
-		gy521_offset_t gyro_offset, accel_offset;
+		mpu_offset_t gyro_offset, accel_offset;
 
 		struct{
 			float accel, gyro;
 		} fsr_div;
 	} conf;
-} gy521_s;
+} mpu_s;
 
 // ============================
 // === Function declaration ===
 // ============================
 /*
- * gy521_init(addr);
+ * mpu_init(addr);
  * Initializes the I²C connection and default configuration.
- * Returns a fully initialized gy521_s struct with function pointers and default values.
+ * Returns a fully initialized mpu_s struct with function pointers and default values.
  */
-gy521_s gy521_init(i2c_inst_t *i2c_port, uint8_t addr);
-bool gy521_use_struct(gy521_s *device);
-bool gy521_write_register(uint8_t *data, uint8_t how_many, bool block);
-bool gy521_read_register(uint8_t reg, uint8_t *out, uint8_t how_many, bool block);
-bool gy521_dlpf_cfg(gy521_dlpf_cfg_t cfg);
-bool gy521_who_am_i(void);
-bool gy521_device_reset(void);
-bool gy521_sleep(gy521_sleep_t sleep); // Set sleep configuration
-bool gy521_stby(uint8_t stby);
-bool gy521_cycle_mode(gy521_cycle_t mode, uint8_t smplrt_wake);
-bool gy521_fsr(gy521_fsr_t fsr, gy521_afsr_t afsr);
-bool gy521_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
-bool gy521_read_sensor(gy521_sensors_t sensors); // 0=all 1=accel 2=temp 3=gyro
-#if GY521_INT_PIN
-void gy521_irq_handler(uint gpio, uint32_t events);
-bool gy521_int_pin_cfg(uint8_t cfg);
-bool gy521_int_enable(uint8_t cfg);
-bool gy521_int_status(void);
+mpu_s mpu_init(i2c_inst_t *i2c_port, uint8_t addr);
+bool mpu_use_struct(mpu_s *device);
+bool mpu_write_register(uint8_t *data, uint8_t how_many, bool block);
+bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many, bool block);
+bool mpu_dlpf_cfg(mpu60x0_dlpf_cfg_t cfg);
+bool mpu_who_am_i(void);
+bool mpu_device_reset(void);
+bool mpu_sleep(mpu_sleep_t sleep); // Set sleep configuration
+bool mpu_stby(uint8_t stby);
+bool mpu_cycle_mode(mpu_cycle_t mode, uint8_t smplrt_wake);
+bool mpu_fsr(mpu60x0_fsr_t fsr, mpu60x0_afsr_t afsr);
+bool mpu_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
+bool mpu_read_sensor(mpu_sensors_t sensors); // 0=all 1=accel 2=temp 3=gyro
+#if MPU60X0_INT_PIN
+void mpu_irq_handler(uint gpio, uint32_t events);
+bool mpu_int_pin_cfg(uint8_t cfg);
+bool mpu_int_enable(uint8_t cfg);
+bool mpu_int_status(void);
 #endif
