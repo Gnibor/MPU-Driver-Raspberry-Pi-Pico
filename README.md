@@ -25,7 +25,7 @@ Dependencies: pico/stdlib, hardware/i2c, string
 ---
 
 ## Badges
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)  ![Platform: RP2040](https://img.shields.io/badge/Platform-RraspberryPi_Pico-blue)  ![Language: C](https://img.shields.io/badge/Language-C-informational)  ![Interface: I2C](https://img.shields.io/badge/Interface-I²C-orange)  
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)  ![Platform: RP2040](https://img.shields.io/badge/Platform-Rraspberry_Pi_Pico-blue)  ![Language: C](https://img.shields.io/badge/Language-C-informational)  ![Interface: I2C](https://img.shields.io/badge/Interface-I²C-orange)  
 
 ---
 
