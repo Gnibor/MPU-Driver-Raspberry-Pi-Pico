@@ -279,11 +279,6 @@ typedef enum {
 } gy521_clk_sel_t;
 #define GY521_TEMP_DIS			(1 << 3)
 #define GY521_CYCLE			(1 << 5)
-typedef enum{
-	GY521_CYCLE_LP  =		2,
-	GY521_CYCLE_ON  =		1,
-	GY521_CYCLE_OFF =		0
-} gy521_cycle_t;
 #define GY521_SLEEP			(1 << 6)
 #define GY521_DEVICE_RESET		(1 << 7)
 
@@ -297,7 +292,6 @@ typedef enum{
 	GY521_STBY_ACCEL =		(7 << 3),
 	GY521_STBY_ALL =		(0x3F)
 } gy521_stby_t;
-
 typedef enum {
 	GY521_LP_WAKE_1_25HZ =		(0 << 6),
 	GY521_LP_WAKE_5HZ  =		(1 << 6),
