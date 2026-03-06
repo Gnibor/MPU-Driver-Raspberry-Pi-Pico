@@ -30,7 +30,6 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include <string.h>
-#include "MPU60X0_reg_map.h"
 #include "mpu60x0.h"
 
 // ===========================

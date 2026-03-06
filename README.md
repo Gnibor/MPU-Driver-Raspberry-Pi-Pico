@@ -1,34 +1,31 @@
-# GY-521 (MPU-6050) Driver for RP2040
+# MPU-60X0 Driver for RP Pico
 
-Lightweight C driver for the **GY-521 (MPU-6050)** 6-axis IMU designed for the **Raspberry Pi RP2040** (Raspberry Pi Pico). Provides clean register-level implementation with automatic scaling and structured device API using function pointers (object-oriented style in C).
+Lightweight C driver for the **MPU-60X0** 6-axis IMU designed for the **Raspberry Pi Pico**. Provides clean register-level implementation with automatic scaling and structured device API.
 
 ---
 
 ## Project Note
-This is my first project in almost a decade. Focus is on:
+This is my first project in almost a decade. My focus is on:
 
 - Clean low-level implementation  
 - Transparent register control  
 - Minimal abstraction  
 - Explicit configuration  
-- Expandability toward full MPU-6050 feature coverage  
+- Expandability toward full MPU-60X0 feature coverage  
 
 ---
 
 ## Requirements
 - Raspberry Pi pico-sdk  
-- RP2040 toolchain  
+- Raspberry Pi Pico toolchain  
 - CMake-based build environment  
 
-Dependencies: pico/stdlib, hardware/i2c  
+Dependencies: pico/stdlib, hardware/i2c, string  
 
 ---
 
 ## Badges
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)  
-![Platform: RP2040](https://img.shields.io/badge/Platform-RP2040-blue)  
-![Language: C](https://img.shields.io/badge/Language-C-informational)  
-![Interface: I2C](https://img.shields.io/badge/Interface-I2C-orange)  
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)  ![Platform: RP2040](https://img.shields.io/badge/Platform-RraspberryPi_Pico-blue)  ![Language: C](https://img.shields.io/badge/Language-C-informational)  ![Interface: I2C](https://img.shields.io/badge/Interface-I²C-orange)  
 
 ---
 
@@ -37,6 +34,7 @@ Dependencies: pico/stdlib, hardware/i2c
 - WHO_AM_I device verification  
 - Device reset and wake-up  
 - Clock source selection  
+- DLPF Configuration  
 - Accelerometer & Gyroscope Full-Scale-Range configuration  
 - Standby control per axis
 - Sleep mode all or temperatur
@@ -49,10 +47,19 @@ Dependencies: pico/stdlib, hardware/i2c
 
 ## Development Plan
 
+### Extended Power Management
+- Cycle mode support  
+- Low-power wake control  
+
+### I2C Slave (I2C_SLVx) Configuration
+- External sensor passthrough  
+- I2C_SLV0–I2C_SLV4 setup  
+- Master mode configuration  
+
 ### Interrupt Configuration & Handling
 - INT_ENABLE register configuration  
 - INT_STATUS decoding  
-- Data-ready and motion detection interrupt support  
+- Data-ready interrupt support  
 - External GPIO interrupt integration  
 - Interrupt-driven sampling  
 
@@ -62,15 +69,6 @@ Dependencies: pico/stdlib, hardware/i2c
 - Burst read from FIFO  
 - Continuous buffered sampling mode  
 
-### I2C Slave (I2C_SLVx) Configuration
-- External sensor passthrough  
-- I2C_SLV0–I2C_SLV4 setup  
-- Master mode configuration  
-
-### Extended Power Management
-- Cycle mode support  
-- Low-power wake control  
-
 ### Complete Register Coverage
 - Structured access to all MPU-6050 registers  
 - Optional register debug dump function  
@@ -78,21 +76,21 @@ Dependencies: pico/stdlib, hardware/i2c
 ---
 
 ## Hardware
-- Raspberry Pi Pico / RP2040  
-- GY-521 (MPU-6050)  
+- Raspberry Pi Pico (RP2040/RP2350)  
+- MPU-60X0 (GY-521)  
 - I²C wiring (default): SDA → GPIO 6, SCL → GPIO 7  
-- Default I²C address: 0x68  
+- Interrupt pin (default): 26  
 
 ---
 
 ## Configuration
-Hardware config can be adjusted in `gy521.h` or in `main.c` before `#include "gy521.h"`:
+Hardware config can be adjusted in `mpu60x0.h` or in `main.c` before `#include "mpu60x0.h"`:
 
 ```c
-#define GY521_I2C_PORT i2c1
-#define GY521_SDA_PIN 6
-#define GY521_SCL_PIN 7
-#define GY521_USE_PULLUP 0
+#define MPU_I2C_PORT i2c1
+#define MPU_SDA_PIN 6
+#define MPU_SCL_PIN 7
+#define MPU_USE_PULLUP 0
 #include "gy521.h"
 ```
 
@@ -106,8 +104,8 @@ int main(void)
     stdio_usb_init();
     while (!stdio_usb_connected()) sleep_ms(100);
 
-    gy521_s imu = gy521_init(GY521_I2C_ADDR_GND);
-    gy521_use(&imu);
+    mpu_s imu = mpu_init(MPU_I2C_ADDR_GND);
+    mpu_use(&imu);
 
     if (!imu.fn.test_connection()) printf("Device not found!\n");
 
@@ -115,15 +113,15 @@ int main(void)
     imu.conf.temp.sleep = false;
     imu.fn.sleep();
 
-    imu.conf.accel.fsr = GY521_ACCEL_FSR_SEL_4G;
-    imu.conf.gyro.fsr = GY521_GYRO_FSR_SEL_1000DPS;
+    imu.conf.accel.fsr = MPU_ACCEL_FSR_SEL_4G;
+    imu.conf.gyro.fsr = MPU_GYRO_FSR_SEL_1000DPS;
     imu.fn.fsr();
 
     imu.fn.gyro.calibrate(10);
 
     imu.conf.scaled = true;
     while (1) {
-        if (imu.fn.read(GY521_ALL)) {
+        if (imu.fn.read(MPU_ALL)) {
             printf("Accel: %.2f %.2f %.2f g\n",
                    imu.v.accel.g.x,
                    imu.v.accel.g.y,
@@ -141,8 +139,8 @@ int main(void)
 ### Initialization
 
 ```c
-gy521_s device = gy521_init(GY521_I2C_ADDR_GND);
-gy521_use(&device);
+mpu_s device = mpu_init(MPU_I2C_ADDR_GND);
+mpu_use(&device);
 ```
 
 Initializes I²C and returns a fully configured device struct.
@@ -154,8 +152,8 @@ And set 'device' as active.
 
 | Function | Description |
 |----------|------------|
-| `gy521_s gy521_init(addr)` | Initilize I²C connection and returns a device struct |
-| `bool gy521_use(device)` | Set the global pointer for fn.* to 'device' |
+| `mpu_s mpu_init(addr)` | Initilize I²C connection and returns a device struct |
+| `bool mpu_use(device)` | Set the global pointer for fn.* to 'device' |
 | `bool fn.test_connection()` | Verifies device via WHO_AM_I register |
 | `bool fn.reset()` | Performs resets set in conf.reset.* |
 | `bool fn.sleep()` | Enables/disables sleep mode |
@@ -167,7 +165,7 @@ And set 'device' as active.
 
 #### Interrupt Functions
 
-If '#define GY521_INT_PIN' is not '0' you unlock these functions
+If you wanna use interrupts `#define MPU_INT_PIN` can not `0`.
 
 | Function | Description |
 |----------|------------|
@@ -179,7 +177,7 @@ If '#define GY521_INT_PIN' is not '0' you unlock these functions
 
 ## Scaling
 
-Raw sensor values are automatically converted when `scaled = true`.
+Raw sensor values are automatically converted when `mpu_read_sensor(MPU_* | MPU_SCALED)` is given.
 
 ### Accelerometer
 
@@ -238,7 +236,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 
 ## Repository
 
-https://github.com/Gnibor/gy521_rp2040
+https://github.com/Gnibor/MPU60X0_RaspberryPi_Pico
 
 ---
 
