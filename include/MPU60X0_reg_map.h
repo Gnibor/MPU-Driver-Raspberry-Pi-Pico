@@ -64,7 +64,7 @@ typedef enum {
 	MPU_SMPLRT_200HZ =		(0x27 << 0)   // 39 decimal = 0x27
 } mpu_smplrt_div_t;
 
-#define MPU_REG_CONFIG		0x1A
+#define MPU_REG_CONFIG			0x1A
 typedef enum {
 	MPU_DLPF_CFG_260HZ =		(0 << 0),  // DLPF off, BW=260Hz, Fs=8kHz Gyro / 1kHz Accel
 	MPU_DLPF_CFG_184HZ =		(1 << 0),
@@ -77,14 +77,14 @@ typedef enum {
 } mpu_dlpf_cfg_t;
 
 typedef enum {
-	MPU_EXT_SYNC_DISABLED =	(0 << 3),
-	MPU_EXT_SYNC_TEMP_OUT =	(1 << 3),
+	MPU_EXT_SYNC_DISABLED =		(0 << 3),
+	MPU_EXT_SYNC_TEMP_OUT =		(1 << 3),
 	MPU_EXT_SYNC_XG =		(2 << 3),
 	MPU_EXT_SYNC_YG =		(3 << 3),
 	MPU_EXT_SYNC_ZG =		(4 << 3),
-	MPU_EXT_SYNC_ACCEL_X =	(5 << 3),
-	MPU_EXT_SYNC_ACCEL_Y =	(6 << 3),
-	MPU_EXT_SYNC_ACCEL_Z =	(7 << 3)
+	MPU_EXT_SYNC_ACCEL_X =		(5 << 3),
+	MPU_EXT_SYNC_ACCEL_Y =		(6 << 3),
+	MPU_EXT_SYNC_ACCEL_Z =		(7 << 3)
 } mpu_ext_sync_set_t;
 
 #define MPU_REG_GYRO_CONFIG		0x1B
@@ -101,48 +101,48 @@ typedef enum {
 	MPU_AFSR_2G =			(0 << 3),
 	MPU_AFSR_4G =			(1 << 3),
 	MPU_AFSR_8G =			(2 << 3),
-	MPU_AFSR_16G =		(3 << 3)
+	MPU_AFSR_16G =			(3 << 3)
 } mpu_afsr_t;
 
 #define MPU_ZA_ST			(1 << 5)
 #define MPU_YA_ST			(1 << 6)
 #define MPU_XA_ST			(1 << 7)
 
-#define MPU_REG_FIFO_EN		0x23
+#define MPU_REG_FIFO_EN			0x23
 #define MPU_SLV0_FIFO_EN		(1 << 0)
 #define MPU_SLV1_FIFO_EN		(1 << 1)
 #define MPU_SLV2_FIFO_EN		(1 << 2)
 #define MPU_ACCEL_FIFO_EN		(1 << 3)
-#define MPU_ZG_FIFO_EN		(1 << 4)
-#define MPU_YG_FIFO_EN		(1 << 5)
-#define MPU_XG_FIFO_EN		(1 << 6)
+#define MPU_ZG_FIFO_EN			(1 << 4)
+#define MPU_YG_FIFO_EN			(1 << 5)
+#define MPU_XG_FIFO_EN			(1 << 6)
 #define MPU_TEMP_FIFO_EN		(1 << 7)
 
 #define MPU_REG_I2C_MST_CTRL		0x24
-#define MPU_I2C_MST_CLK_DIV_23	(0 << 0)
-#define MPU_I2C_MST_CLK_DIV_24	(1 << 0)
-#define MPU_I2C_MST_CLK_DIV_25	(2 << 0)
-#define MPU_I2C_MST_CLK_DIV_26	(3 << 0)
-#define MPU_I2C_MST_CLK_DIV_27	(4 << 0)
-#define MPU_I2C_MST_CLK_DIV_28	(5 << 0)
-#define MPU_I2C_MST_CLK_DIV_29	(6 << 0)
-#define MPU_I2C_MST_CLK_DIV_30	(7 << 0)
-#define MPU_I2C_MST_CLK_DIV_31	(8 << 0)
-#define MPU_I2C_MST_CLK_DIV_16	(9 << 0)
-#define MPU_I2C_MST_CLK_DIV_17	(10 << 0)
-#define MPU_I2C_MST_CLK_DIV_18	(11 << 0)
-#define MPU_I2C_MST_CLK_DIV_19	(12 << 0)
-#define MPU_I2C_MST_CLK_DIV_20	(13 << 0)
-#define MPU_I2C_MST_CLK_DIV_21	(14 << 0)
-#define MPU_I2C_MST_CLK_DIV_22	(15 << 0)
+#define MPU_I2C_MST_CLK_DIV_23		(0 << 0)
+#define MPU_I2C_MST_CLK_DIV_24		(1 << 0)
+#define MPU_I2C_MST_CLK_DIV_25		(2 << 0)
+#define MPU_I2C_MST_CLK_DIV_26		(3 << 0)
+#define MPU_I2C_MST_CLK_DIV_27		(4 << 0)
+#define MPU_I2C_MST_CLK_DIV_28		(5 << 0)
+#define MPU_I2C_MST_CLK_DIV_29		(6 << 0)
+#define MPU_I2C_MST_CLK_DIV_30		(7 << 0)
+#define MPU_I2C_MST_CLK_DIV_31		(8 << 0)
+#define MPU_I2C_MST_CLK_DIV_16		(9 << 0)
+#define MPU_I2C_MST_CLK_DIV_17		(10 << 0)
+#define MPU_I2C_MST_CLK_DIV_18		(11 << 0)
+#define MPU_I2C_MST_CLK_DIV_19		(12 << 0)
+#define MPU_I2C_MST_CLK_DIV_20		(13 << 0)
+#define MPU_I2C_MST_CLK_DIV_21		(14 << 0)
+#define MPU_I2C_MST_CLK_DIV_22		(15 << 0)
 #define MPU_I2C_MST_P_NSR		(1 << 4)
 #define MPU_SLV_3_FIFO_EN		(1 << 5)
-#define MPU_WAIT_FOR_ES		(1 << 6)
+#define MPU_WAIT_FOR_ES			(1 << 6)
 #define MPU_MULTI_MST_EN		(1 << 7)
 
 #define MPU_REG_I2C_SLV0_ADDR		0x25
 #define MPU_I2C_SLV0_ADDR		(0x7F)
-#define MPU_I2C_SLV0_RW		(1 << 7)
+#define MPU_I2C_SLV0_RW			(1 << 7)
 
 #define MPU_REG_I2C_SLV0_REG		0x26
 
@@ -151,11 +151,11 @@ typedef enum {
 #define MPU_I2C_SLV0_GRP		(1 << 4)
 #define MPU_I2C_SLV0_REG_DIS		(1 << 5)
 #define MPU_I2C_SLV0_BYTE_SW		(1 << 6)
-#define MPU_I2C_SLV0_EN		(1 << 7)
+#define MPU_I2C_SLV0_EN			(1 << 7)
 
 #define MPU_REG_I2C_SLV1_ADDR		0x28
 #define MPU_I2C_SLV1_ADDR		(0x7F)
-#define MPU_I2C_SLV1_RW		(1 << 7)
+#define MPU_I2C_SLV1_RW			(1 << 7)
 
 #define MPU_REG_I2C_SLV1_REG		0x29
 
@@ -164,11 +164,11 @@ typedef enum {
 #define MPU_I2C_SLV1_GRP		(1 << 4)
 #define MPU_I2C_SLV1_REG_DIS		(1 << 5)
 #define MPU_I2C_SLV1_BYTE_SW		(1 << 6)
-#define MPU_I2C_SLV1_EN		(1 << 7)
+#define MPU_I2C_SLV1_EN			(1 << 7)
 
 #define MPU_REG_I2C_SLV2_ADDR		0x2B
 #define MPU_I2C_SLV2_ADDR		(0x7F)
-#define MPU_I2C_SLV2_RW		(1 << 7)
+#define MPU_I2C_SLV2_RW			(1 << 7)
 
 #define MPU_REG_I2C_SLV2_REG		0x2C
 
@@ -177,11 +177,11 @@ typedef enum {
 #define MPU_I2C_SLV2_GRP		(1 << 4)
 #define MPU_I2C_SLV2_REG_DIS		(1 << 5)
 #define MPU_I2C_SLV2_BYTE_SW		(1 << 6)
-#define MPU_I2C_SLV2_EN		(1 << 7)
+#define MPU_I2C_SLV2_EN			(1 << 7)
 
 #define MPU_REG_I2C_SLV3_ADDR		0x2E
 #define MPU_I2C_SLV3_ADDR		(0x7F)
-#define MPU_I2C_SLV3_RW		(1 << 7)
+#define MPU_I2C_SLV3_RW			(1 << 7)
 
 #define MPU_REG_I2C_SLV3_REG		0x2F
 
@@ -190,24 +190,24 @@ typedef enum {
 #define MPU_I2C_SLV3_GRP		(1 << 4)
 #define MPU_I2C_SLV3_REG_DIS		(1 << 5)
 #define MPU_I2C_SLV3_BYTE_SW		(1 << 6)
-#define MPU_I2C_SLV3_EN		(1 << 7)
+#define MPU_I2C_SLV3_EN			(1 << 7)
 
 #define MPU_REG_I2C_SLV4_ADDR		0x31
 #define MPU_I2C_SLV2_ADDR		(0x7F)
-#define MPU_I2C_SLV2_RW		(1 << 7)
+#define MPU_I2C_SLV2_RW			(1 << 7)
 
 #define MPU_REG_I2C_SLV4_REG		0x32
 #define MPU_REG_I2C_SLV4_DO		0x33
 
 #define MPU_REG_I2C_SLV4_CTRL		0x34
-#define MPU_I2C_MST_DLY		(0xF << 0)
+#define MPU_I2C_MST_DLY			(0xF << 0)
 #define MPU_I2C_SLV4_REG_DIS		(1 << 5)
 #define MPU_I2C_SLV4_INT_EN		(1 << 6)
-#define MPU_I2C_SLV4_EN		(1 << 7)
+#define MPU_I2C_SLV4_EN			(1 << 7)
 
 #define MPU_REG_I2C_SLV4_DI		0x35
 
-#define MPU_REG_I2C_MST_STATUS	0x36
+#define MPU_REG_I2C_MST_STATUS		0x36
 #define MPU_I2C_SLV0_NACK		(1 << 0)
 #define MPU_I2C_SLV1_NACK		(1 << 1)
 #define MPU_I2C_SLV2_NACK		(1 << 2)
@@ -239,7 +239,7 @@ typedef enum{
 } mpu_int_enable_t;
 #define MPU_REG_INT_STATUS		0x3A
 #define MPU_DATA_RDY_INT		(1 << 0)
-#define MPU_I2C_MST_INT		(1 << 3)
+#define MPU_I2C_MST_INT			(1 << 3)
 #define MPU_FIFO_OFLOW_INT		(1 << 4)
 
 #define MPU_REG_ACCEL_XOUT_H		0x3B
@@ -294,27 +294,27 @@ typedef enum{
 #define MPU_DELAY_ES_SHADOW		(1 << 7)
 
 #define MPU_REG_SIGNAL_PATH_RESET	0x68
-#define MPU_TEMP_RESET		(1 << 0)
-#define MPU_ACCEL_RESET		(1 << 1)
-#define MPU_GYRO_RESET		(1 << 2)
+#define MPU_TEMP_RESET			(1 << 0)
+#define MPU_ACCEL_RESET			(1 << 1)
+#define MPU_GYRO_RESET			(1 << 2)
 
 #define MPU_REG_USER_CTRL		0x6A
 #define MPU_SIG_COND_RESET		(1 << 0)
 #define MPU_I2C_MST_RESET		(1 << 1)
-#define MPU_FIFO_RESET		(1 << 2)
-#define MPU_I2C_IF_DIS		(1 << 4)
-#define MPU_I2C_MST_EN		(1 << 5)
+#define MPU_FIFO_RESET			(1 << 2)
+#define MPU_I2C_IF_DIS			(1 << 4)
+#define MPU_I2C_MST_EN			(1 << 5)
 #define MPU_FIFO_EN			(1 << 6)
 
 #define MPU_REG_PWR_MGMT_1		0x6B
 typedef enum {
 	MPU_CLK_INTERNAL =		(0 << 0),
-	MPU_CLK_XGYRO =		(1 << 0),
-	MPU_CLK_YGYRO =		(2 << 0),
-	MPU_CLK_ZGYRO =		(3 << 0),
+	MPU_CLK_XGYRO =			(1 << 0),
+	MPU_CLK_YGYRO =			(2 << 0),
+	MPU_CLK_ZGYRO =			(3 << 0),
 	MPU_CLK_EXT32KHZ =		(4 << 0),
 	MPU_CLK_EXT19MHZ =		(5 << 0),
-	MPU_CLK_STOP =		(7 << 0)
+	MPU_CLK_STOP =			(7 << 0)
 } mpu_clk_sel_t;
 #define MPU_TEMP_DIS			(1 << 3)
 #define MPU_CYCLE			(1 << 5)
@@ -327,9 +327,9 @@ typedef enum{
 	MPU_STBY_ZG =			(1 << 0),
 	MPU_STBY_YG =			(1 << 1),
 	MPU_STBY_XG =			(1 << 2),
-	MPU_STBY_GYRO =		(7 << 0),
+	MPU_STBY_GYRO =			(7 << 0),
 	MPU_STBY_ACCEL =		(7 << 3),
-	MPU_STBY_ALL =		(0x3F)
+	MPU_STBY_ALL =			(0x3F)
 } mpu_stby_t;
 typedef enum {
 	MPU_LP_WAKE_1_25HZ =		(0 << 6),
