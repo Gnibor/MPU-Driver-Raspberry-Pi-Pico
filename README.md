@@ -45,16 +45,11 @@ Dependencies: pico/stdlib, hardware/i2c, string
 
 ---
 
-## Development Plan
+## Experimental
 
 ### Extended Power Management
 - Cycle mode support  
 - Low-power wake control  
-
-### I2C Slave (I2C_SLVx) Configuration
-- External sensor passthrough  
-- I2C_SLV0–I2C_SLV4 setup  
-- Master mode configuration  
 
 ### Interrupt Configuration & Handling
 - INT_ENABLE register configuration  
@@ -62,6 +57,15 @@ Dependencies: pico/stdlib, hardware/i2c, string
 - Data-ready interrupt support  
 - External GPIO interrupt integration  
 - Interrupt-driven sampling  
+
+---
+
+## Development Plan
+
+### I2C Slave (I2C_SLVx) Configuration
+- External sensor passthrough  
+- I2C_SLV0–I2C_SLV4 setup  
+- Master mode configuration  
 
 ### FIFO Support
 - FIFO_EN configuration  
@@ -91,7 +95,7 @@ Hardware config can be adjusted in `mpu60x0.h` or in `main.c` before `#include "
 #define MPU_SDA_PIN 6
 #define MPU_SCL_PIN 7
 #define MPU_USE_PULLUP 0
-#include "gy521.h"
+#include "mpu60x0.h"
 ```
 
 ---
@@ -104,24 +108,19 @@ int main(void)
     stdio_usb_init();
     while (!stdio_usb_connected()) sleep_ms(100);
 
-    mpu_s imu = mpu_init(MPU_I2C_ADDR_GND);
-    mpu_use(&imu);
+    mpu_s imu = mpu_init(MPU_I2C_PORT, MPU_I2C_ADDR_GND);
+    mpu_use_struct(&imu);
 
-    if (!imu.fn.test_connection()) printf("Device not found!\n");
+    if (!mpu_who_am_i()) printf("Device not found!\n");
 
-    imu.conf.sleep = false;
-    imu.conf.temp.sleep = false;
-    imu.fn.sleep();
+    mpu_sleep(MPU_SLEEP_ALL_OFF);
 
-    imu.conf.accel.fsr = MPU_ACCEL_FSR_SEL_4G;
-    imu.conf.gyro.fsr = MPU_GYRO_FSR_SEL_1000DPS;
-    imu.fn.fsr();
+    mpu_fsr(MPU_FSR_500DPS, MPU_AFSR_2G);
 
-    imu.fn.gyro.calibrate(10);
+    mpu_calibrate_gyro(10);
 
-    imu.conf.scaled = true;
     while (1) {
-        if (imu.fn.read(MPU_ALL)) {
+        if(imu.fn.read(MPU_ALL | MPU_SCALED)){
             printf("Accel: %.2f %.2f %.2f g\n",
                    imu.v.accel.g.x,
                    imu.v.accel.g.y,
@@ -139,8 +138,8 @@ int main(void)
 ### Initialization
 
 ```c
-mpu_s device = mpu_init(MPU_I2C_ADDR_GND);
-mpu_use(&device);
+mpu_s device = mpu_init(MPU_I2C_PORT, MPU_I2C_ADDR_GND);
+mpu_use_struct(&device);
 ```
 
 Initializes I²C and returns a fully configured device struct.
@@ -152,26 +151,29 @@ And set 'device' as active.
 
 | Function | Description |
 |----------|------------|
-| `mpu_s mpu_init(addr)` | Initilize I²C connection and returns a device struct |
-| `bool mpu_use(device)` | Set the global pointer for fn.* to 'device' |
-| `bool fn.test_connection()` | Verifies device via WHO_AM_I register |
-| `bool fn.reset()` | Performs resets set in conf.reset.* |
-| `bool fn.sleep()` | Enables/disables sleep mode |
-| `bool fn.fsr()` | Sets full-scale range and updates scaling |
-| `bool fn.stby()` | Enables/disables standby per axis |
-| `bool fn.clk_sel()` | Selects clock source |
-| `bool fn.read(accel_temp_gyro)` | Reads sensor data (raw or scaled) |
-| `bool fn.gyro.calibrate(samples)` | Computes gyro zero-offset |
+| `mpu_s mpu_init(i2c_inst_t, mpu_addr_t)` | Initilize I²C connection and returns a device struct |
+| `bool mpu_use_struct(mpu_s)` | Set the global device pointer for functions to `mpu_s` |
+| `bool mpu_who_am_i(void)` | Verifies device via WHO_AM_I register |
+| `bool mpu_device_reset(void)` | Performs a device reset |
+| `bool mpu_sleep(mpu_sleep_s)` | Enables/disables sleep mode for the complete device or just the temperatur sensor|
+| `bool mpu_fsr(mpu_fsr_s, mpu_afsr_s)` | Sets full-scale range and updates scaling divider |
+| `bool mpu_stby(mpu_stby_t)` | Enables/disables standby per axis, sensor or all |
+| `bool mpu_read_sensor(mpu_sensors_s)` | Reads sensor data (raw or scaled) |
+| `bool mpu_calibrate_gyro(samples)` | Computes `samples` time to calculate gyro zero-offset |
 
-#### Interrupt Functions
+#### Interrupt Functions (Experimental)
 
-If you wanna use interrupts `#define MPU_INT_PIN` can not `0`.
+If you wanna use interrupts `#define MPU_INT_PIN` can not be `0`.
 
 | Function | Description |
 |----------|------------|
-| `bool fn.interrupt.pin_cfg()` | Configures the interrupts pins |
-| `bool fn.interrupt.enable()` | Enables interrupts |
-| `bool fn.interrupt.status()` | Reads the INT_STATUS register and sets flags in v.int_status |
+| `bool mpu_int_pin_cfg(mpu_int_pin_cfg_t)` | Configures the interrupt pin choosen with `mpu_int_pin_cfg_t` |
+| `bool mpu_int_enable(mpu_int_enable_t)` | Enables interrupts choosen with `mpu_int_enable_t` |
+| `bool mpu_int_status(void)` | Reads the INT_STATUS register and returns `true` if any is set |
+
+#### Cycle Mode (Experimental)
+
+if you wanna use the `mpu_cycle_mode(mpu_cycle_t mode, uint8_t smplrt_wake);` function the `#define MPU_USE_CYCLE` must be set to `1`.
 
 ---
 
