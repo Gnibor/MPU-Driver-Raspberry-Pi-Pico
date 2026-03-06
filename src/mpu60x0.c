@@ -30,6 +30,7 @@
 #include "MPU60X0_reg_map.h"
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
+#include <stdio.h>
 #include <string.h>
 #include "mpu60x0.h"
 
@@ -228,7 +229,10 @@ bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr){
 // ====================================================
 bool mpu_calibrate_gyro(uint8_t samples){
 	if(!g_mpu) return false;
-	
+
+	if(samples < 5) samples = 5;
+	else if (samples > 20) samples = 20;
+
 	int64_t sum_gx = 0;
 	int64_t sum_gy = 0;
 	int64_t sum_gz = 0;
