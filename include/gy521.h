@@ -92,10 +92,26 @@ typedef enum{
  * Used in gy521_dlpf_cfg()
  */
 typedef enum{
-	GY521_CYCLE_LP  =		2,
-	GY521_CYCLE_ON  =		1,
-	GY521_CYCLE_OFF =		0
+	GY521_CYCLE_LP  = 2,
+	GY521_CYCLE_ON  = 1,
+	GY521_CYCLE_OFF = 0
 } gy521_cycle_t;
+
+/*
+ * Used in gy521_sleep()
+ */
+typedef enum{
+	GY521_SLEEP_DEVICE_ON	= (1 << 0),
+	GY521_SLEEP_DEVICE_OFF	= (0 << 0),
+	GY521_SLEEP_TEMP_ON	= (1 << 1),
+	GY521_SLEEP_TEMP_OFF	= (0 << 1),
+	GY521_SLEEP_ALL_OFF	= 0
+} gy521_sleep_t;
+
+// ========================
+// === Global Variables ===
+// ========================
+extern volatile bool g_gy521_int_flag;
 
 // =======================
 // === Data Structures ===
@@ -168,30 +184,6 @@ typedef struct gy521_s{
 			float accel, gyro;
 		} fsr_div;
 	} conf;
-
-	// =========================
-	// === Function Pointers ===
-	// =========================
-	struct{
-		bool (*who_am_i)(void);
-		bool (*reset)(void);
-		bool (*sleep)(bool device, bool temp);
-		bool (*read_sensor)(gy521_sensors_t);
-		bool (*fsr)(gy521_fsr_t, gy521_afsr_t);
-		bool (*stby)(uint8_t);
-		bool (*cycle)(gy521_cycle_t, uint8_t);
-		bool (*smplrt_div)(uint8_t div);
-		bool (*device_reset)(void);
-		bool (*gyro_calibrate)(uint8_t);
-
-#if GY521_INT_PIN
-		struct{
-			bool (*pin_cfg)(uint8_t cfg);
-			bool (*enable)(uint8_t cfg);
-			bool (*status)(void);
-		} interrupt;
-#endif
-	} fn;
 } gy521_s;
 
 // ============================
@@ -203,19 +195,20 @@ typedef struct gy521_s{
  * Returns a fully initialized gy521_s struct with function pointers and default values.
  */
 gy521_s gy521_init(i2c_inst_t *i2c_port, uint8_t addr);
-bool gy521_use(gy521_s *device);
+bool gy521_use_struct(gy521_s *device);
 bool gy521_write_register(uint8_t *data, uint8_t how_many, bool block);
 bool gy521_read_register(uint8_t reg, uint8_t *out, uint8_t how_many, bool block);
 bool gy521_dlpf_cfg(gy521_dlpf_cfg_t cfg);
 bool gy521_who_am_i(void);
 bool gy521_device_reset(void);
-bool gy521_sleep(bool device, bool temp); // Set sleep configuration
+bool gy521_sleep(gy521_sleep_t sleep); // Set sleep configuration
 bool gy521_stby(uint8_t stby);
 bool gy521_cycle_mode(gy521_cycle_t mode, uint8_t smplrt_wake);
 bool gy521_fsr(gy521_fsr_t fsr, gy521_afsr_t afsr);
 bool gy521_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
 bool gy521_read_sensor(gy521_sensors_t sensors); // 0=all 1=accel 2=temp 3=gyro
 #if GY521_INT_PIN
+void gy521_irq_handler(uint gpio, uint32_t events);
 bool gy521_int_pin_cfg(uint8_t cfg);
 bool gy521_int_enable(uint8_t cfg);
 bool gy521_int_status(void);

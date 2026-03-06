@@ -37,7 +37,6 @@
 // ===========================
 // === Function prototypes ===
 // ===========================
-void gy521_irq_handler(uint gpio, uint32_t events);
 
 // ========================
 // === Global Variables ===
@@ -47,11 +46,10 @@ static uint8_t g_gy521_cache[14] = {0}; // Temporary buffer for I2C reads
 static int g_gy521_ret_cache = 0; // Temporary buffer for return values
 
 #if GY521_INT_PIN
-volatile bool g_mpu_irq_flag = false;
-
+volatile bool g_gy521_int_flag;
 void gy521_irq_handler(uint gpio, uint32_t events){
     if(gpio == GY521_INT_PIN){
-        g_mpu_irq_flag = true;
+        g_gy521_int_flag = true;
     }
 }
 #endif
@@ -152,16 +150,16 @@ bool gy521_device_reset(void){
 // ==================
 // === Sleep Mode ===
 // ==================
-bool gy521_sleep(bool device, bool temp){
+bool gy521_sleep(gy521_sleep_t sleep){
 	if(!gy521_read_register(GY521_REG_PWR_MGMT_1, g_gy521_cache, 1, true)) return false;
 
 	// Sleep Bit
-	if(device) g_gy521_cache[0] |= GY521_SLEEP;
-	else g_gy521_cache[0] &= ~GY521_SLEEP;
+	if(sleep & GY521_SLEEP_DEVICE_ON) g_gy521_cache[0] |= GY521_SLEEP;
+	else if(!(sleep & (GY521_SLEEP_DEVICE_ON << 1))) g_gy521_cache[0] &= ~GY521_SLEEP;
 
 	// Temperature disable Bit
-	if(temp) g_gy521_cache[0] |= GY521_TEMP_DIS;
-	else g_gy521_cache[0] &= ~GY521_TEMP_DIS;
+	if(sleep & GY521_SLEEP_TEMP_ON) g_gy521_cache[0] |= GY521_TEMP_DIS;
+	else if(!(sleep & (GY521_SLEEP_TEMP_ON << 2))) g_gy521_cache[0] &= ~GY521_TEMP_DIS;
 
 	if(!gy521_write_register((uint8_t[]){GY521_REG_PWR_MGMT_1, g_gy521_cache[0]}, 2, false)) return false;
 
@@ -282,7 +280,6 @@ bool gy521_int_enable(uint8_t cfg){
 	// Write back to registers
 	if(!gy521_write_register((uint8_t[]){GY521_REG_INT_ENABLE, g_gy521_cache[0]}, 2, false)) return false;
 
-	gpio_set_irq_enabled_with_callback(GY521_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &gy521_irq_handler);
 
 	return true;
 }
@@ -291,9 +288,6 @@ bool gy521_int_enable(uint8_t cfg){
 // === Read interrupt status ===
 // =============================
 bool gy521_int_status(void){
-	if(!g_mpu_irq_flag) return false;
-	else g_mpu_irq_flag = false;
-
 	if(!gy521_read_register(GY521_REG_INT_STATUS, g_gy521_cache, 1, false)) return false;
 
 	if((g_gy521_cache[0] & GY521_DATA_RDY_INT) ||
