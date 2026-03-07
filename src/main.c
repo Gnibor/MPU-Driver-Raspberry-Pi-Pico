@@ -43,7 +43,7 @@ int main(void){
 
 	//mpu_reset(MPU_RESET_SIG_COND);
 
-	if(mpu_device_reset()) printf("__!Device resetted!__\n");
+	if(mpu_reset(MPU_RESET_DEVICE)) printf("__!Device resetted!__\n");
 	sleep_ms(50);
 	int retries = 3;
 	bool connected = false;
