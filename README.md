@@ -177,7 +177,7 @@ And if you wan't interrupt pin pull-up set `#define MPU_INT_PULLUP` to `1`.
 
 ## Scaling
 
-Raw sensor values are automatically converted when `mpu_read_sensor(MPU_* | MPU_SCALED)` is given.
+Raw sensor values are automatically converted when `mpu_read_sensor(MPU_* | `**`MPU_SCALED`**`)` is given.
 
 ### Accelerometer
 
