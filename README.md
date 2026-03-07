@@ -160,7 +160,7 @@ And set 'device' as active.
 | `bool mpu_stby(mpu_stby_t)` | Enables/disables standby per axis, sensor or all |
 | `bool mpu_read_sensor(mpu_sensor_s)` | Reads sensor data (raw or scaled) |
 | `bool mpu_calibrate_gyro(samples)` | Computes `samples` **(5-20)** time to calculate gyro zero-offset |
-| `bool mpu_cycle_mode(mpu_cycle_t, smplrt_wake)` | Activate/deactivate **cycle** mode with **low power** option and set the `mpu_lp_wake_t` |
+| `bool mpu_cycle_mode(mpu_cycle_t, mpu_lp_wake_t)` | Activate/deactivate **cycle** mode with **low power** option and set the `mpu_lp_wake_t` |
 
 #### Interrupt Functions (Experimental)
 
