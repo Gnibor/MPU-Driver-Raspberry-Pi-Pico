@@ -10,7 +10,7 @@ all:
 	cp  build/compile_commands.json ./
 
 flash:
-	picotool load $(BUILD_DIR)/gy521_rp2040.uf2
+	picotool load $(BUILD_DIR)/MPU60X0_RaspberryPi_Pico.uf2 -f
 
 clean:
 	rm -rf $(BUILD_DIR)
