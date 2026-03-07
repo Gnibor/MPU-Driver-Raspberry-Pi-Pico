@@ -67,7 +67,7 @@
 #endif
 
 #ifndef MPU_INT_PULLUP
-#define MPU_INT_PULLUP 0 // 1 = enable internal pull-up, 0 = disabled
+#define MPU_INT_PULLUP 1 // 1 = enable internal pull-up, 0 = disabled
 #endif
 
 /*
@@ -197,7 +197,7 @@ bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate);
 #if MPU_INT_PIN
 void mpu_irq_handler(uint gpio, uint32_t events);
 bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg);
-bool mpu_int_enable(mpu_int_enable_t type);
+bool mpu_int_enable(mpu_int_enable_t enable);
 bool mpu_int_status(void);
 #endif
 #endif // MPU60X0_H

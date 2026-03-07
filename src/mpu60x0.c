@@ -440,11 +440,11 @@ bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg){
 // ============================
 // === Interrupt pin enable === !!!Still work in progress!!!
 // ============================
-bool mpu_int_enable(mpu_int_enable_t type){
+bool mpu_int_enable(mpu_int_enable_t enable){
 	if(!mpu_read_register(MPU_REG_INT_ENABLE, g_mpu_cache, 1, true)) return false;
 
 	g_mpu_cache[0] &= ~MPU_INT_ENABLE_ALL;
-	g_mpu_cache[0] |= type;
+	g_mpu_cache[0] |= enable;
 
 	// Write back to registers
 	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_ENABLE, g_mpu_cache[0]}, 2, false)) return false;
