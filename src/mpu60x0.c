@@ -467,9 +467,23 @@ bool mpu_read_sensor(mpu_sensor_t sensors){
 #if MPU_INT_PIN
 volatile bool g_mpu_int_flag;
 
+// ======================================
+// ========= Interrupt Handler ==========
+// ======================================
+// * Gets called if the MPU_INT_PIN 
+// * goes high. Sets `g_mpu_int_flag`
+// * true if high.
+// ======================================
+//
+// argument:
+// 	gpio = the pin who got the
+// 	       interrupt
+// 	events = the called interrupt
+// 	         event
+// ======================================
 void mpu_irq_handler(uint gpio, uint32_t events){
-    if(gpio == MPU_INT_PIN){
-        g_mpu_int_flag = true;
+    if(gpio == MPU_INT_PIN){   // Checks if the called pin is MPU_INT_PIN
+        g_mpu_int_flag = true; // if it is set `g_mpu_int_flag` true.
     }
 }
 
