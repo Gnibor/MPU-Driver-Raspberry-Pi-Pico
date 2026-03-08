@@ -90,7 +90,7 @@ int main(void){
 
 	while(1){
 		if(mpu_int_status()){
-			if(mpu_read_sensor(MPU_ACCEL | MPU_SCALED))
+			if(mpu_read_sensor(MPU_ALL | MPU_SCALED))
 				printf("G=X:%6.3f Y:%6.3f Z:%6.3f | °C=%6.2f | °/s=X:%9.3f Y:%9.3f Z:%9.3f\n",
 					mpu.v.accel.g.x, mpu.v.accel.g.y, mpu.v.accel.g.z,
 					mpu.v.temp.celsius,

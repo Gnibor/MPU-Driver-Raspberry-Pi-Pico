@@ -474,7 +474,7 @@ void mpu_irq_handler(uint gpio, uint32_t events){
 }
 
 // ===================================
-// === Interrupt pin configuration === !!!Still work in progress!!!
+// === Interrupt pin configuration ===
 // ===================================
 bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg){
 	if(!mpu_read_register(MPU_REG_INT_PIN_CFG, g_mpu_cache, 1, true)) return false;
@@ -495,6 +495,7 @@ bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg){
 // ======================================
 bool mpu_int_motion_cfg(uint8_t ms, uint16_t mg){
 	if(ms < 1 || mg < 32) return false;
+	else if(mg < 32) mg = 1;
 	else mg /= 32;
 
 	if(!mpu_ahpf(MPU_AHPF_5HZ)) return false;
@@ -506,38 +507,60 @@ bool mpu_int_motion_cfg(uint8_t ms, uint16_t mg){
 	return true;
 }
 
-// ============================
-// === Interrupt pin enable === !!!Still work in progress!!!
-// ============================
-bool mpu_int_enable(mpu_int_enable_t enable){
-	gpio_set_irq_enabled_with_callback(MPU_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &mpu_irq_handler);
+// ============================================================
+// =================== Interrupt pin enable ===================
+// ============================================================
+// * Set the interrupt handler callback to mpu_irq_handler.   *
+// * Reads the INT_ENABLE register, unsets the bits for       *
+// * the interrupts then sets bit in the INT_STATUS register, *
+// * with the bitmask given as the argument `interrupt`.      *
+// ============================================================
+//
+// arguments:
+// 	interrupt = takes a bitmask for the INT_STATUS register
+//
+// return:
+// 	true = when it could write to the INT_STATUS register
+// 	false = if anything goes wrong
+// ============================================================
+bool mpu_int_enable(mpu_int_enable_t interrupt){
+	gpio_set_irq_enabled_with_callback(MPU_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &mpu_irq_handler); // Listen MPU_INT_PIN call `mpu_irq_handler` if pin HIGH
 
-	if(!mpu_read_register(MPU_REG_INT_ENABLE, g_mpu_cache, 1, true)) return false;
+	if(!mpu_read_register(MPU_REG_INT_ENABLE, g_mpu_cache, 1, true)) return false; // Read the INT_ENABLE register
 
-	g_mpu_cache[0] &= ~MPU_INT_ENABLE_ALL;
-	g_mpu_cache[0] |= enable;
+	g_mpu_cache[0] &= ~MPU_INT_ENABLE_ALL; // Unsets all interrupt bits
+	g_mpu_cache[0] |= interrupt; // Sets with the bitmask given by argument
 
-	// Write back to registers
-	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_ENABLE, g_mpu_cache[0]}, 2, false)) return false;
+	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_ENABLE, g_mpu_cache[0]}, 2, false)) return false; // Write back to registers
 
-	sleep_ms(5);
+	sleep_ms(2); // Little activation pause
 
-	return true;
+	return true; // When nothing goes wrong
 }
 
-// =============================
-// === Read interrupt status === !!!Still work in progress!!!
-// =============================
+// ================================================
+// ============ Read interrupt status =============
+// ================================================
+// * If a interrupt at MPU_INT_PIN is detected,   *
+// * this function reads the interrupt status     *
+// * register and returns true when any interrupt *
+// * bit is 1 other wise false.                   *
+// ================================================
+//
+// return:
+// 	true = an interrupt has occurred
+// 	false = no interrupt
+// ================================================
 bool mpu_int_status(void){
-	if(!g_mpu_int_flag) return false;
-	else g_mpu_int_flag = false;
+	if(!g_mpu_int_flag) return false; // Checks if an interrupt occurred at MPU_INT_PIN
+	else g_mpu_int_flag = false; // When an interrupt has occurred set the flag false
 
-	if(!mpu_read_register(MPU_REG_INT_STATUS, g_mpu_cache, 1, false)) return false;
+	if(!mpu_read_register(MPU_REG_INT_STATUS, g_mpu_cache, 1, false)) return false; // Read INT_STATUS register save output in g_mpu_cache else return false
 
-	if((g_mpu_cache[0] & MPU_DATA_RDY_INT) ||
-	   (g_mpu_cache[0] & MPU_I2C_MST_INT) ||
-	   (g_mpu_cache[0] & MPU_MOTION_INT) ||
-	   (g_mpu_cache[0] & MPU_FIFO_OFLOW_INT)) return true;
+	if((g_mpu_cache[0] & MPU_DATA_RDY_INT) || // Check data ready interrupt
+	   (g_mpu_cache[0] & MPU_I2C_MST_INT) || // Check I²C master interrupt
+	   (g_mpu_cache[0] & MPU_MOTION_INT) || // Check motion interrupt
+	   (g_mpu_cache[0] & MPU_FIFO_OFLOW_INT)) return true; // Check fifo overflow interrupt and return true if any was set
 	else return false;
 }
 #endif
