@@ -40,7 +40,7 @@ int main(void){
 
 	//mpu_reset(MPU_RESET_SIG_COND);
 
-	if(mpu_reset(MPU_RESET_DEVICE)) printf("__!Device resetted!__\n");
+	if(mpu_reset(MPU_RESET_ALL)) printf("__!Device resetted!__\n");
 	sleep_ms(50);
 	int retries = 3;
 	bool connected = false;
@@ -59,13 +59,12 @@ int main(void){
 
 	if(mpu_sleep(MPU_SLEEP_ALL_OFF)) printf("sleep is deactivated!\n");
 
-	if(mpu_fsr(MPU_FSR_2000DPS, MPU_AFSR_16G)) printf("FSR=2000dps, AFSR=8g\n");
-
+	if(mpu_fsr(MPU_FSR_250DPS, MPU_AFSR_2G)) printf("FSR=2000dps, AFSR=8g\n");
 	printf("Try to calibrate GY-521\n");
 	sleep_ms(2000);
-	if(mpu_calibrate_gyro(10)) printf("GY-521 gyro is now calibrated.\n");
+	if(mpu_calibrate((MPU_ACCEL_X | MPU_GYRO), 100)) printf("GY-521 gyro and accel is now calibrated.\n");
 
-	mpu_dlpf_cfg(MPU_DLPF_CFG_184HZ);
+	//mpu_dlpf_cfg(MPU_DLPF_CFG_184HZ);
 
 	printf("how big is the struct: %dbytes\n", sizeof(mpu));
 
@@ -74,29 +73,29 @@ int main(void){
 
 	// INT Pin configuration in the MPU60X0
 	mpu_int_pin_cfg(
-		MPU_INT_LEVEL_LOW  | // 1 = Level, 0 = pulse
-		MPU_INT_OPEN_DRAIN | // 1 = Push-Pull, 0 = Open-Drain
+		//MPU_INT_LEVEL_LOW  | // 1 = Level, 0 = pulse
+		//MPU_INT_OPEN_DRAIN | // 1 = Push-Pull, 0 = Open-Drain
 		MPU_LATCH_INT_EN   | // Latch Interrupt active
-		MPU_INT_RD_CLEAR     // Interrupt cleared by reading the fn.interrupt.status()
+		MPU_INT_RD_CLEAR     // Interrupt cleared by reading the mpu_int_status()
 	);
 
-	if(mpu_cycle_mode(MPU_CYCLE_OFF, MPU_LP_WAKE_5HZ)) printf("Enable Cycle mode!!!\n");
+	mpu_int_motion_cfg(1, 160);
+
+	//if(mpu_cycle_mode(MPU_CYCLE_ON, MPU_LP_WAKE_5HZ)) printf("Enable Cycle mode!!!\n");
 	sleep_ms(10);
 
-	//if(mpu_sleep(MPU_SLEEP_ALL_OFF)) printf("sleep is deactivated!\n");
+	if(mpu_sleep(MPU_SLEEP_DEVICE_OFF)) printf("sleep is deactivated!\n");
 	// Data ready interrupt activate
-	mpu_int_enable(MPU_DATA_RDY_EN);
-	gpio_set_irq_enabled_with_callback(MPU_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &mpu_irq_handler);
+	mpu_int_enable(MPU_INT_MOTION_EN);
 
 	while(1){
-		if(g_mpu_int_flag) printf("Hello from the Interrupt Flag!!!!!!!!!!!!!!!!\n");
-		//if(mpu_int_status()){
-			if(mpu_read_sensor(MPU_ALL | MPU_SCALED))
-				printf("G=X:%6.3f Y:%6.3f Z:%6.3f | °C=%6.2f | °/s=X:%9.3f Y:%9.3f Z:%9.3f\n", 
-					mpu.v.accel.g.x, mpu.v.accel.g.y, mpu.v.accel.g.z, 
-					mpu.v.temp.celsius, 
+		if(mpu_int_status()){
+			if(mpu_read_sensor(MPU_ACCEL | MPU_SCALED))
+				printf("G=X:%6.3f Y:%6.3f Z:%6.3f | °C=%6.2f | °/s=X:%9.3f Y:%9.3f Z:%9.3f\n",
+					mpu.v.accel.g.x, mpu.v.accel.g.y, mpu.v.accel.g.z,
+					mpu.v.temp.celsius,
 					mpu.v.gyro.dps.x, mpu.v.gyro.dps.y, mpu.v.gyro.dps.z);
-		//}
+		}
 		sleep_ms(250);
 	}
 }

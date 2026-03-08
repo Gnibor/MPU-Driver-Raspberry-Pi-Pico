@@ -57,6 +57,20 @@
 #define MPU_YA_TEST_A			(3 << 2)
 #define MPU_XA_TEST_A			(3 << 4)
 
+#define MPU_REG_XA_OFFS_H        0x06
+#define MPU_REG_XA_OFFS_L        0x07
+#define MPU_REG_YA_OFFS_H        0x08
+#define MPU_REG_YA_OFFS_L        0x09
+#define MPU_REG_ZA_OFFS_H        0x0A
+#define MPU_REG_ZA_OFFS_L        0x0B
+
+#define MPU_REG_XG_OFFS_H        0x13
+#define MPU_REG_XG_OFFS_L        0x14
+#define MPU_REG_YG_OFFS_H        0x15
+#define MPU_REG_YG_OFFS_L        0x16
+#define MPU_REG_ZG_OFFS_H        0x17
+#define MPU_REG_ZG_OFFS_L        0x18
+
 #define MPU_REG_SMPLRT_DIV		0x19
 typedef enum {
 	MPU_SMPLRT_8KHZ =		(0 << 0),
@@ -100,6 +114,14 @@ typedef enum {
 
 #define MPU_REG_ACCEL_CONFIG		0x1C
 typedef enum {
+	MPU_AHPF_RESET  =		(0 << 0), // Filter zurücksetzen
+	MPU_AHPF_5HZ    =		(1 << 0), // Hochpassfilter 5Hz (Empfohlen für Motion Detection)
+	MPU_AHPF_2_5HZ  =		(2 << 0),
+	MPU_AHPF_1_25HZ =		(3 << 0),
+	MPU_AHPF_0_63HZ = 		(4 << 0),
+	MPU_AHPF_HOLD   = 		(7 << 0)  // Filterwert halten
+} mpu_ahpf_t;
+typedef enum {
 	MPU_AFSR_2G =			(0 << 3),
 	MPU_AFSR_4G =			(1 << 3),
 	MPU_AFSR_8G =			(2 << 3),
@@ -109,7 +131,12 @@ typedef enum {
 #define MPU_ZA_ST			(1 << 5)
 #define MPU_YA_ST			(1 << 6)
 #define MPU_XA_ST			(1 << 7)
-
+#define MPU_REG_FF_THR           0x1D
+#define MPU_REG_FF_DUR           0x1E
+#define MPU_REG_MOT_THR			0x1F
+#define MPU_REG_MOT_DUR			0x20
+#define MPU_REG_ZRMOT_THR        0x21
+#define MPU_REG_ZRMOT_DUR        0x22
 #define MPU_REG_FIFO_EN			0x23
 #define MPU_SLV0_FIFO_EN		(1 << 0)
 #define MPU_SLV1_FIFO_EN		(1 << 1)
@@ -237,12 +264,15 @@ typedef enum{
 	MPU_DATA_RDY_EN    =		(1 << 0),
 	MPU_I2C_MST_INT_EN =		(1 << 3),
 	MPU_FIFO_OFLOW_EN  =		(1 << 4),
-	MPU_INT_ENABLE_ALL =		0x19
+	MPU_INT_MOTION_EN  =		(1 << 6),
+	MPU_INT_ENABLE_ALL =		0x59
 } mpu_int_enable_t;
+#define MPU_REG_DMP_INT_STATUS		0x39 // DMP spezifischer Interrupt Status
 #define MPU_REG_INT_STATUS		0x3A
 #define MPU_DATA_RDY_INT		(1 << 0)
 #define MPU_I2C_MST_INT			(1 << 3)
 #define MPU_FIFO_OFLOW_INT		(1 << 4)
+#define MPU_MOTION_INT			(1 << 6)
 
 #define MPU_REG_ACCEL_XOUT_H		0x3B
 #define MPU_REG_ACCEL_XOUT_l		0x3C
@@ -299,6 +329,22 @@ typedef enum{
 #define MPU_TEMP_RESET			(1 << 0)
 #define MPU_ACCEL_RESET			(1 << 1)
 #define MPU_GYRO_RESET			(1 << 2)
+
+#define MPU_REG_MOT_DETECT_CTRL		0x69 // Motion Detection Zähler & Delay
+typedef enum {
+    MOT_COUNT_RESET   = 0x00, // Sofortiger Reset wenn Bewegung stoppt
+    MOT_COUNT_DEC_1   = 0x01, // Zähler sinkt langsam (weniger nervös)
+    MOT_COUNT_DEC_2   = 0x02,
+    MOT_COUNT_DEC_4   = 0x03,
+    ACCEL_ON_DELAY  = (0x01 << 4), // Standard Startup Delay
+} mpu_mot_count_t;
+
+typedef enum {
+    MOT_DELAY_0MS     = 0x00, // Einschwingzeit des Filters
+    MOT_DELAY_1MS     = 0x10,
+    MOT_DELAY_2MS     = 0x20,
+    MOT_DELAY_3MS     = 0x30
+} mpu_mot_delay_t;
 
 #define MPU_REG_USER_CTRL		0x6A
 #define MPU_SIG_COND_RESET		(1 << 0)

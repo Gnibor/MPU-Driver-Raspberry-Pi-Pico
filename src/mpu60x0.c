@@ -29,7 +29,10 @@
  */
 #include "hardware/i2c.h"
 #include "hardware/gpio.h"
+#include <pico/time.h>
+#include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 #include "mpu60x0.h"
 #include "MPU60X0_reg_map.h"
 
@@ -177,7 +180,7 @@ bool mpu_sleep(mpu_sleep_t sleep){
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, g_mpu_cache[0]}, 2, false)) return false;
 
-	sleep_ms(10); // Activation pause
+	sleep_ms(5); // Activation pause
 
 	return true;
 }
@@ -193,6 +196,8 @@ bool mpu_stby(mpu_stby_t stby){
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_2, g_mpu_cache[0]}, 2, false)) return false;
 
+	sleep_ms(5);
+
 	return true;
 }
 
@@ -203,6 +208,8 @@ bool mpu_clk_sel(mpu_clk_sel_t clksel){
 	g_mpu_cache[0] |= clksel;
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, g_mpu_cache[0]}, 2, false)) return false;
+
+	sleep_ms(5);
 
 	return true;
 }
@@ -218,6 +225,7 @@ bool mpu_dlpf_cfg(mpu_dlpf_cfg_t cfg){
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_CONFIG, g_mpu_cache[0]}, 2, false)) return false;
 
+	sleep_ms(5);
 	return true;
 }
 
@@ -232,6 +240,23 @@ bool mpu_smplrt_div(mpu_smplrt_div_t smplrt_div){
 
 	if(!mpu_write_register(g_mpu_cache, 2, false)) return false;
 
+	sleep_ms(5);
+	return true;
+}
+
+// ==============================
+// === Accel High Pass Filter ===
+// ==============================
+bool mpu_ahpf(mpu_ahpf_t ahpf){
+	if(!mpu_read_register(MPU_REG_ACCEL_CONFIG, g_mpu_cache, 1, true)) return false;
+
+	g_mpu_cache[0] &= ~MPU_AHPF_HOLD;
+	g_mpu_cache[1] = (g_mpu_cache[0] | ahpf);
+	g_mpu_cache[0] = MPU_REG_ACCEL_CONFIG;
+
+	if(!mpu_write_register(g_mpu_cache, 2, false)) return false;
+
+	sleep_ms(5);
 	return true;
 }
 
@@ -307,40 +332,66 @@ bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr){
 	// Write back to registers
 	if(!mpu_write_register((uint8_t[]){MPU_REG_GYRO_CONFIG, g_mpu_cache[0], g_mpu_cache[1]}, 3, false)) return false;
 
+	sleep_ms(5);
+
 	return true;
 }
 
 // ====================================================
 // === Calibrate gyro (determine zero-point offset) ===
 // ====================================================
-bool mpu_calibrate_gyro(uint8_t samples){
+bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 	if(!g_mpu) return false;
-
-	if(samples < 5) samples = 5;
-	else if (samples > 20) samples = 20;
 
 	int64_t sum_gx = 0;
 	int64_t sum_gy = 0;
 	int64_t sum_gz = 0;
 
-	for(uint8_t i = 0; i < samples; i++){
-		if(!mpu_read_register(MPU_REG_GYRO_XOUT_H, g_mpu_cache, 6, false)) return false;
+	uint8_t mask = (sensor & MPU_ALL);
 
-		g_mpu->v.gyro.raw.x = (g_mpu_cache[0]  << 8) | g_mpu_cache[1];
-		g_mpu->v.gyro.raw.y = (g_mpu_cache[2]  << 8) | g_mpu_cache[3];
-		g_mpu->v.gyro.raw.z = (g_mpu_cache[4]  << 8) | g_mpu_cache[5];
+	if(mask & MPU_GYRO){
+		for(uint8_t i = 0; i < samples; i++){
+			if(!mpu_read_register(MPU_REG_GYRO_XOUT_H, g_mpu_cache, 6, false)) return false;
 
-		sum_gx += g_mpu->v.gyro.raw.x;
-		sum_gy += g_mpu->v.gyro.raw.y;
-		sum_gz += g_mpu->v.gyro.raw.z;
+			g_mpu->v.gyro.raw.x = (g_mpu_cache[0]  << 8) | g_mpu_cache[1];
+			g_mpu->v.gyro.raw.y = (g_mpu_cache[2]  << 8) | g_mpu_cache[3];
+			g_mpu->v.gyro.raw.z = (g_mpu_cache[4]  << 8) | g_mpu_cache[5];
 
-		sleep_ms(5); // small delay between measurements
+			sum_gx += g_mpu->v.gyro.raw.x;
+			sum_gy += g_mpu->v.gyro.raw.y;
+			sum_gz += g_mpu->v.gyro.raw.z;
+
+			sleep_ms(5); // small delay between measurements
+		}
+
+		// Store averages as offsets
+		g_mpu->conf.offset_gyro.x = sum_gx / samples;
+		g_mpu->conf.offset_gyro.y = sum_gy / samples;
+		g_mpu->conf.offset_gyro.z = sum_gz / samples;
+	}else if (mask & MPU_ACCEL){
+		for(uint8_t i = 0; i < samples; i++){
+			if(!mpu_read_register(MPU_REG_GYRO_XOUT_H, g_mpu_cache, 6, false)) return false;
+
+			g_mpu->v.accel.raw.x = (g_mpu_cache[0]  << 8) | g_mpu_cache[1];
+			g_mpu->v.accel.raw.y = (g_mpu_cache[2]  << 8) | g_mpu_cache[3];
+			g_mpu->v.accel.raw.z = (g_mpu_cache[4]  << 8) | g_mpu_cache[5];
+
+			sum_gx += g_mpu->v.accel.raw.x;
+			sum_gy += g_mpu->v.accel.raw.y;
+			sum_gz += g_mpu->v.accel.raw.z;
+
+			sleep_ms(5); // small delay between measurements
+		}
+
+		// Store averages as offsets
+		g_mpu->conf.offset_accel.x = sum_gx / samples;
+		g_mpu->conf.offset_accel.y = sum_gy / samples;
+		g_mpu->conf.offset_accel.z = sum_gz / samples;
+
+		if(sensor & MPU_ACCEL_X) g_mpu->conf.offset_accel.x -= 16384.0f;
+		else if(sensor & MPU_ACCEL_Y) g_mpu->conf.offset_accel.y -= 16384.0f;
+		else if(sensor & MPU_ACCEL_Z) g_mpu->conf.offset_accel.z -= 16384.0f;
 	}
-
-	// Store averages as offsets
-	g_mpu->conf.gyro_offset.x = sum_gx / samples;
-	g_mpu->conf.gyro_offset.y = sum_gy / samples;
-	g_mpu->conf.gyro_offset.z = sum_gz / samples;
 
 	return true;
 }
@@ -395,18 +446,18 @@ bool mpu_read_sensor(mpu_sensor_t sensors){
 	if(sensors & MPU_SCALED){
 		// Raw -> G for accelerometer
 		if(mask & MPU_ACCEL){
-			g_mpu->v.accel.g.x = g_mpu->v.accel.raw.x / g_mpu->conf.fsr_div.accel;
-			g_mpu->v.accel.g.y = g_mpu->v.accel.raw.y / g_mpu->conf.fsr_div.accel;
-			g_mpu->v.accel.g.z = g_mpu->v.accel.raw.z / g_mpu->conf.fsr_div.accel;
+			g_mpu->v.accel.g.x = (g_mpu->v.accel.raw.x - g_mpu->conf.offset_accel.x) / g_mpu->conf.fsr_div.accel;
+			g_mpu->v.accel.g.y = (g_mpu->v.accel.raw.y - g_mpu->conf.offset_accel.y) / g_mpu->conf.fsr_div.accel;
+			g_mpu->v.accel.g.z = (g_mpu->v.accel.raw.z - g_mpu->conf.offset_accel.z) / g_mpu->conf.fsr_div.accel;
 		}
 		// Raw -> °C
 		if(mask & MPU_TEMP)
 			g_mpu->v.temp.celsius = (g_mpu->v.temp.raw / 340.0f) + 36.53f;
 		// Raw -> °/s for gyroscope
 		if(mask & MPU_GYRO){
-			g_mpu->v.gyro.dps.x = (g_mpu->v.gyro.raw.x - g_mpu->conf.gyro_offset.x) / g_mpu->conf.fsr_div.gyro;
-			g_mpu->v.gyro.dps.y = (g_mpu->v.gyro.raw.y - g_mpu->conf.gyro_offset.y) / g_mpu->conf.fsr_div.gyro;
-			g_mpu->v.gyro.dps.z = (g_mpu->v.gyro.raw.z - g_mpu->conf.gyro_offset.z) / g_mpu->conf.fsr_div.gyro;
+			g_mpu->v.gyro.dps.x = (g_mpu->v.gyro.raw.x - g_mpu->conf.offset_gyro.x) / g_mpu->conf.fsr_div.gyro;
+			g_mpu->v.gyro.dps.y = (g_mpu->v.gyro.raw.y - g_mpu->conf.offset_gyro.y) / g_mpu->conf.fsr_div.gyro;
+			g_mpu->v.gyro.dps.z = (g_mpu->v.gyro.raw.z - g_mpu->conf.offset_gyro.z) / g_mpu->conf.fsr_div.gyro;
 		}
 	}
 
@@ -434,6 +485,24 @@ bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg){
 	// Write back to registers
 	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_PIN_CFG, g_mpu_cache[0]}, 2, false)) return false;
 
+	sleep_ms(5);
+
+	return true;
+}
+
+// ======================================
+// === Interrupt Motion configuration ===
+// ======================================
+bool mpu_int_motion_cfg(uint8_t ms, uint16_t mg){
+	if(ms < 1 || mg < 32) return false;
+	else mg /= 32;
+
+	if(!mpu_ahpf(MPU_AHPF_5HZ)) return false;
+
+	if(!mpu_write_register((uint8_t[]){MPU_REG_MOT_THR, mg, ms}, 3, false)) return false;
+
+	sleep_ms(5);
+
 	return true;
 }
 
@@ -441,6 +510,8 @@ bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg){
 // === Interrupt pin enable === !!!Still work in progress!!!
 // ============================
 bool mpu_int_enable(mpu_int_enable_t enable){
+	gpio_set_irq_enabled_with_callback(MPU_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &mpu_irq_handler);
+
 	if(!mpu_read_register(MPU_REG_INT_ENABLE, g_mpu_cache, 1, true)) return false;
 
 	g_mpu_cache[0] &= ~MPU_INT_ENABLE_ALL;
@@ -449,6 +520,7 @@ bool mpu_int_enable(mpu_int_enable_t enable){
 	// Write back to registers
 	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_ENABLE, g_mpu_cache[0]}, 2, false)) return false;
 
+	sleep_ms(5);
 
 	return true;
 }
@@ -457,10 +529,14 @@ bool mpu_int_enable(mpu_int_enable_t enable){
 // === Read interrupt status === !!!Still work in progress!!!
 // =============================
 bool mpu_int_status(void){
+	if(!g_mpu_int_flag) return false;
+	else g_mpu_int_flag = false;
+
 	if(!mpu_read_register(MPU_REG_INT_STATUS, g_mpu_cache, 1, false)) return false;
 
 	if((g_mpu_cache[0] & MPU_DATA_RDY_INT) ||
 	   (g_mpu_cache[0] & MPU_I2C_MST_INT) ||
+	   (g_mpu_cache[0] & MPU_MOTION_INT) ||
 	   (g_mpu_cache[0] & MPU_FIFO_OFLOW_INT)) return true;
 	else return false;
 }

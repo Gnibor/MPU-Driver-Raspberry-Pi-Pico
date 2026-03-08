@@ -76,6 +76,9 @@
  */
 typedef enum{
 	MPU_ACCEL = (1 << 0),
+	MPU_ACCEL_X = ((1 << 4) | MPU_ACCEL),
+	MPU_ACCEL_Y = ((1 << 5) | MPU_ACCEL),
+	MPU_ACCEL_Z = ((1 << 6) | MPU_ACCEL),
 	MPU_TEMP = (1 << 1),
 	MPU_GYRO = (1 << 2),
 	MPU_ALL = (MPU_ACCEL | MPU_TEMP | MPU_GYRO),
@@ -165,7 +168,7 @@ typedef struct mpu_s{
 	struct{
 		i2c_inst_t *i2c_port;
 		mpu_addr_t addr; // Device Address
-		struct{ int32_t x, y, z; } gyro_offset;
+		struct{ int32_t x, y, z; } offset_gyro, offset_accel;
 
 		struct{ float accel, gyro; } fsr_div;
 	} conf;
@@ -191,13 +194,14 @@ bool mpu_clk_sel(mpu_clk_sel_t clksel);
 bool mpu_smplrt_div(mpu_smplrt_div_t smplrt_div);
 bool mpu_dlpf_cfg(mpu_dlpf_cfg_t cfg);
 bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr);
-bool mpu_calibrate_gyro(uint8_t sample); // calibrate gyro offsets (sample=10)
+bool mpu_calibrate(mpu_sensor_t sensor, uint8_t sample); // calibrate sensor offsets
 bool mpu_read_sensor(mpu_sensor_t sensors); // 0=all 1=accel 2=temp 3=gyro
 bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate);
 #if MPU_INT_PIN
 void mpu_irq_handler(uint gpio, uint32_t events);
 bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg);
 bool mpu_int_enable(mpu_int_enable_t enable);
+bool mpu_int_motion_cfg(uint8_t ms, uint16_t mg);
 bool mpu_int_status(void);
 #endif
 #endif // MPU60X0_H
