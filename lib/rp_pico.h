@@ -1,7 +1,7 @@
 #ifndef RP_PICO_H
 #define RP_PICO_H
 #include "hardware/i2c.h"
-#define DEBUG_ENABLED 0
+#define DEBUG_ENABLED 1
 
 /* Enum for readable key codes */
 typedef enum {

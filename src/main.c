@@ -35,6 +35,7 @@
 
 int main(void){
 	stdio_init_board();
+	//mpu_s mpu = mpu_init(MPU_I2C_PORT, MPU_ADDR_AD0_GND);
 	mpu_s mpu = mpu_init(MPU_I2C_PORT, MPU_ADDR_AD0_GND);
 	mpu_use_struct(&mpu);
 
@@ -42,22 +43,8 @@ int main(void){
 
 	if(mpu_reset(MPU_RESET_ALL)) printf("__!Device resetted!__\n");
 	sleep_ms(50);
-	int retries = 3;
-	bool connected = false;
-	printf("Try connecting GY-521...\n");
-	while(retries--){
-		connected = mpu_who_am_i();
-		if(connected) break;
-
-		printf("Retrying...\n");
-		sleep_ms(750);
-	}
-	if(!connected) printf("GY-521 not found!\n");
-	else printf("GY-521 ready!\n");
 
 	//if(mpu_clk_sel(MPU_CLK_XGYRO)) printf("CLK_SEL is set to the internal 8Mhz clock!!!\n");
-
-	if(mpu_sleep(MPU_SLEEP_ALL_OFF)) printf("sleep is deactivated!\n");
 
 	if(mpu_fsr(MPU_FSR_250DPS, MPU_AFSR_2G)) printf("FSR=2000dps, AFSR=8g\n");
 	printf("Try to calibrate GY-521\n");

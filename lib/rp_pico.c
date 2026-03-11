@@ -18,7 +18,7 @@ bool is_i2c_initialized(i2c_inst_t *i2c) {
 
 	// 2. Check: Ist das Enable-Bit im Hardware-Register des Controllers gesetzt?
 	// i2c_get_hw(i2c) gibt uns direkten Zugriff auf die Register-Struktur
-	return (i2c_get_hw(i2c)->enable & I2C_IC_ENABLE_ENABLE_BITS) != 0;
+	return ((i2c_get_hw(i2c)->enable & I2C_IC_ENABLE_ENABLE_BITS) != 0);
 }
 
 /**

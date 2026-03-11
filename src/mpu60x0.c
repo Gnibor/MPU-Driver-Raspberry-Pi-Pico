@@ -53,42 +53,56 @@ static int g_mpu_ret_cache = 0; // Temporary buffer for return values
 // === Initialize MPU ===
 // ==========================
 mpu_s mpu_init(i2c_inst_t *i2c_port, mpu_addr_t addr){
-	if(!is_i2c_initialized(MPU_I2C_PORT)){
-		i2c_init(MPU_I2C_PORT, 400 * 1000); // 400 kHz I2C
+	mpu_s mpu; // Initalize device struct and function pointers
+	memset(&mpu, 0, sizeof(mpu));
+
+	if(!i2c_port){
+		mpu.conf.i2c_port = i2c1;
+		LOG_W("mpu_init(): i2c_port not valid instead "ANSI_ITALIC ANSI_BOLD"i2c1"ANSI_RESET" is used");
+	}else mpu.conf.i2c_port = i2c_port;
+
+	if(!addr){
+		mpu.conf.addr = MPU_ADDR_AD0_GND;
+		LOG_W("mpu_init(): addr not valid instead "ANSI_ITALIC ANSI_BOLD"0x%02X"ANSI_RESET" is used", MPU_ADDR_AD0_GND);
+	}else mpu.conf.addr = addr;
+
+	mpu.conf.fsr_div.accel = 16384.0f;
+	mpu.conf.fsr_div.gyro = 131.0f;
+	g_mpu = &mpu;
+
+	if(!is_i2c_initialized(i2c_port)){
+		i2c_init(mpu.conf.i2c_port, 400 * 1000); // 400 kHz I2C
 		gpio_set_function(MPU_SDA_PIN, GPIO_FUNC_I2C);
 		gpio_set_function(MPU_SCL_PIN, GPIO_FUNC_I2C);
-		LOG_I("mpu_init(): I²C initialized");
+		LOG_I("mpu_init(): I²C initialized at 400kHz SDA:%d SCL:%d", MPU_SDA_PIN, MPU_SCL_PIN);
 	}else{
-		LOG_I("mpu_init(): I²C is already initialized");
+		LOG_W("mpu_init(): I²C is already initialized");
 	}
 
 #if MPU_USE_PULLUP
 	gpio_pull_up(MPU_SDA_PIN);
 	gpio_pull_up(MPU_SCL_PIN);
-	LOG_D("mpu_init(): I²C pull up is on");
+	LOG_D("mpu_init(): I²C pull-up on");
 #endif
 
 #if MPU_INT_PIN
 	// Configure optional interrupt pin
 	gpio_init(MPU_INT_PIN);
 	gpio_set_dir(MPU_INT_PIN, GPIO_IN);
+	LOG_I("mpu_init(): interrupt pin GPIO%d", MPU_INT_PIN);
 #endif
 #if MPU_INT_PULLUP
 	gpio_pull_up(MPU_INT_PIN);
+	LOG_D("mpu_init(): MPU_INT_PIN pull-up on");
 #endif
 
-	mpu_s mpu; // Initalize device struct and function pointers
-	memset(&mpu, 0, sizeof(mpu));
+	if(!mpu_who_am_i()){
+		LOG_E("mpu_init(): failed exec mpu_who_am_i()");
+	}
 
-	if(!i2c_port) mpu.conf.i2c_port = i2c1;
-	else mpu.conf.i2c_port = i2c_port;
-
-	if(!addr) mpu.conf.addr = MPU_ADDR_AD0_GND;
-	else mpu.conf.addr = addr;
-
-	mpu.conf.fsr_div.accel = 16384.0f;
-	mpu.conf.fsr_div.gyro = 131.0f;
-
+	if(!mpu_sleep(MPU_SLEEP_ALL_OFF)){
+		LOG_E("mpu_init(): faild exec mpu_sleep(MPU_SLEEP_ALL_OFF)");
+	}
 	return mpu;
 }
 
@@ -97,9 +111,12 @@ mpu_s mpu_init(i2c_inst_t *i2c_port, mpu_addr_t addr){
 // =========================
 // to set device as used device for the functions who need the struct
 bool mpu_use_struct(mpu_s *device){
-	if (device == NULL) return false; // Check if device is set
-
+	if (device == NULL){
+		LOG_E("mpu_use_struct(): device = NULL");
+		return false; // Check if device is set
+	}
 	g_mpu = device;
+	LOG_I("mpu_use_struct(): g_mpu got set");
 
 	return true;
 }
@@ -108,10 +125,18 @@ bool mpu_use_struct(mpu_s *device){
 // === I²C Register Write ===
 // ==========================
 bool mpu_write_register(uint8_t *data, uint8_t how_many, bool block){
-	if(!g_mpu) return false;
-
+	if(!g_mpu){
+		return false;
+		LOG_E("mpu_write_register(): empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		LOG_I("mpu_write_register(): use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+	}
 	g_mpu_ret_cache = i2c_write_blocking(g_mpu->conf.i2c_port, g_mpu->conf.addr, data, how_many, block);
-	if(g_mpu_ret_cache != how_many) return false;
+	if(g_mpu_ret_cache == how_many){
+		LOG_D("mpu_write_register(): %d bytes written to reg 0x%02X", how_many, data[0]);
+	}else{
+		LOG_E("mpu_write_register(): I²C failed at reg 0x%02X (return: %d)", data[0], how_many);
+		return false;
+	}
 
 	return true;
 }
@@ -120,23 +145,42 @@ bool mpu_write_register(uint8_t *data, uint8_t how_many, bool block){
 // === I2C Register Read ===
 // =========================
 bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many, bool block){
-	if(!g_mpu) return false;
+	if(!g_mpu){
+		return false;
+		LOG_E("mpu_read_register(): empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		LOG_I("mpu_read_register(): use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+	}
 
-	if(!mpu_write_register(&reg, 1, true)) return false;
-
+	if(!mpu_write_register(&reg, 1, true)){
+		LOG_E("mpu_read_register(): failed exec mpu_write_register(0x%02X, 1, true)", reg);
+		return false;
+	}
 	g_mpu_ret_cache = i2c_read_blocking(g_mpu->conf.i2c_port, g_mpu->conf.addr, out, how_many, block);
-	if(g_mpu_ret_cache != how_many) return false;
-
-	return true;
+	if(g_mpu_ret_cache == how_many){
+		LOG_D("mpu_read_register(): %d bytes written to reg 0x%02X", how_many, reg);
+		return true;
+	}else{
+		LOG_E("mpu_read_register(): I²C failed at reg 0x%02X (return: %d)", reg, how_many);
+		return false;
+	}
 }
 
 // =======================
 // === Test Connection ===
 // =======================
 bool mpu_who_am_i(void){
-	if(!mpu_read_register(MPU_REG_WHO_AM_I, g_mpu_cache, 1, false)) return false;
+	if(!mpu_read_register(MPU_REG_WHO_AM_I, g_mpu_cache, 1, false)){
+		LOG_E("mpu_who_am_i(): failed exec mpu_read_register()");
+		return false;
+	}
 
-	return g_mpu_cache[0] == MPU_WHO_AM_I ? true : false;
+	if(g_mpu_cache[0] == MPU_WHO_AM_I){
+		LOG_I("mpu_who_am_i(): device is a MPU60X0");
+		return true;
+	}else{
+		LOG_E("mpu_who_am_i(): device is not a MPU60X0");
+		return false;
+	}
 }
 
 // ======================
