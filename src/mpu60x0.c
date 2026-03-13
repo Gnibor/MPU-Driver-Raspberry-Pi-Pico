@@ -29,6 +29,7 @@
  */
 #include "hardware/i2c.h"
 #include "hardware/gpio.h"
+#include <stdlib.h>
 #include <pico/time.h>
 #include <stdbool.h>
 #include <string.h>
@@ -50,11 +51,10 @@ static uint8_t gc_mpu[14] = {0};
 
 /** @brief Active device pointer used by all standalone functions. 
  *  Set via @ref mpu_init or @ref mpu_use_struct. */
-static mpu_s *g_mpu = NULL;
+ mpu_s *g_mpu = NULL;
 
 /** @brief Cache for the last I2C operation return value (byte count or error). */
 static int g_mpu_ret_cache = 0;
-
 
 /**
  * @brief Initializes the MPU device struct and the Raspberry Pi Pico I2C hardware.
@@ -665,9 +665,13 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 
 	}
 	if (mask & MPU_ACCEL){ // Checks if accelerometer should be calibrated
+g_mpu->conf.offset_accel.x = 0;
+g_mpu->conf.offset_accel.y = 0;
+g_mpu->conf.offset_accel.z = 0;
+
+			sum_x = 0; sum_y = 0; sum_z = 0; // Set sum back to `0` in case both sensors got read
 		LOG_I("mpu_calibrate(): starting accel calibration...");
 		for(uint8_t i = 0; i < samples; i++){
-			sum_x = 0; sum_y = 0; sum_z = 0; // Set sum back to `0` in case both sensors got read
 			if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, gc_mpu, 6, false)){ // Read the accel output
 				LOG_E("mpu_calibrate(): failed to read 6 bytes from reg ACCEL_XOUT_H (0x%02X)", MPU_REG_ACCEL_XOUT_H);
 				return false;
@@ -688,13 +692,27 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 		g_mpu->conf.offset_accel.y = sum_y / samples; // Store y axis average as offset_accel.y
 		g_mpu->conf.offset_accel.z = sum_z / samples; // Store z axis average as offset_accel.z
 
-		if(sensor & MPU_ACCEL_X){
-			g_mpu->conf.offset_accel.x -= 16384.0f; // minus earth own gravity
-		}else if(sensor & MPU_ACCEL_Y){
-			g_mpu->conf.offset_accel.y -= 16384.0f; // minus earth own gravity
-		}else if(sensor & MPU_ACCEL_Z){
-			g_mpu->conf.offset_accel.z -= 16384.0f; // minus earth own gravity
+		if((sensor & MPU_ACCEL_X) == MPU_ACCEL_X){
+			if(g_mpu->conf.offset_accel.x > 0)
+				g_mpu->conf.offset_accel.x -= 16384;
+			else
+				g_mpu->conf.offset_accel.x += 16384;
 		}
+
+		if((sensor & MPU_ACCEL_Y) == MPU_ACCEL_Y){
+			if(g_mpu->conf.offset_accel.y > 0)
+				g_mpu->conf.offset_accel.y -= 16384;
+			else
+				g_mpu->conf.offset_accel.y += 16384;
+		}
+
+		if((sensor & MPU_ACCEL_Z) == MPU_ACCEL_Z){
+			if(g_mpu->conf.offset_accel.z > 0)
+				g_mpu->conf.offset_accel.z -= 16384;
+			else
+				g_mpu->conf.offset_accel.z += 16384;
+		}
+
 		LOG_I("mpu_calibrate(): accel calibration done");
 		LOG_D("mpu_calibrate(): accel offset x=%d, y=%d, z=%d", g_mpu->conf.offset_accel.x, g_mpu->conf.offset_accel.y, g_mpu->conf.offset_accel.z);
 	}

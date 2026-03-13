@@ -1,0 +1,5 @@
+CompileFlags:
+  Add: [-Wall, -Wextra, -DSDK_PICO]
+  Remove: [-mthumb, -mabi=aapcs] # Verhindert nervige Clang-Warnungen bei ARM-Architekturen
+Index:
+  Background: true
