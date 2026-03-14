@@ -1,7 +1,8 @@
 #ifndef RP_PICO_H
 #define RP_PICO_H
 #include "hardware/i2c.h"
-#define DEBUG_ENABLED 1
+#define DEBUG_ENABLED 0
+#define LOG_NEW_LINE 1
 
 /* Enum for readable key codes */
 typedef enum {
@@ -37,5 +38,6 @@ void pico_log(log_level_t level, const char *fmt, ...);
     #define LOG_D(...) ((void)0) // Completely ignored by the compiler
 #endif
 
+key_t get_key();
 bool is_i2c_initialized(i2c_inst_t *i2c);
 #endif

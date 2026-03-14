@@ -79,7 +79,8 @@ void pico_log(log_level_t level, const char *fmt, ...){
 	va_start(args, fmt);
 	vprintf(fmt, args);
 	va_end(args);
-
+#if LOG_NEW_LINE
 	// 6. Always end with a newline and reset
-	printf(ANSI_RESET "\n");
+	printf(ANSI_RESET"\n");
+#endif
 }
