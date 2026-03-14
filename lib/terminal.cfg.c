@@ -3,6 +3,8 @@
  * @brief Project specific configuration for the terminal.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -29,22 +31,32 @@ static watchable_t watch_dictionary[] = {
 
 void cmd_mpu_status(const char* a){ 
 	(void)a; 
-	LOG_I("MPU6050 is %sONLINE%s", ANSI_GREEN, ANSI_RESET); 
+	LOG_T("MPU6050 is %sONLINE%s", ANSI_GREEN, ANSI_RESET); 
 }
 
 void cmd_mpu_calibrate(const char* a){
 	uint8_t samples = 50;
 	if (a != NULL) samples = (uint8_t)atoi(a);
 
-	LOG_I("Starting calibration with %u samples...", samples);
+	LOG_T("Starting calibration with %u samples...", samples);
 	mpu_calibrate((MPU_ACCEL_Z | MPU_GYRO), samples);
-	LOG_I("Calibration finished.");
+	LOG_T("Calibration finished.");
 }
 
 void cmd_reset(const char* a){ 
-	(void)a; 
-	mpu_reset(MPU_RESET_ALL); 
-	LOG_W("System Reset triggered!"); 
+	(void)a;
+    term_busy = true; // Sperrt Sidebar-Updates (Vorsichtshalber)
+    
+    LOG_W("Resetting MPU...");
+    sleep_ms(200); // Warten, bis alle vorherigen I2C-Reads der Main-Loop fertig sind
+    
+    if(mpu_reset(MPU_RESET_ALL)) {
+        LOG_T("Reset successful.");
+    } else {
+        LOG_E("Reset failed - Bus stuck?");
+    }
+
+    term_busy = false;
 }
 
 void cmd_sleep(const char* a){
@@ -52,27 +64,28 @@ void cmd_sleep(const char* a){
 		LOG_W("Usage: sleep device=on/off OR temp=on/off");
 		return;
 	}
+    term_busy = true;
 
 	const char* tmp_val = term_get_arg(a, "temp");
 
 	if (strcmp(a, "on") == 0){
 		mpu_sleep(MPU_SLEEP_DEVICE_ON);
-		LOG_I("Sleep mode: Device %sON%s", ANSI_YELLOW, ANSI_RESET);
+		LOG_T("Sleep mode: Device %sON%s", ANSI_YELLOW, ANSI_RESET);
 	}else if (strcmp(a, "off") == 0){
 		mpu_sleep(MPU_SLEEP_ALL_OFF);
-		LOG_I("Sleep mode: Device %sOFF%s", ANSI_GREEN, ANSI_RESET);
-
+		LOG_T("Sleep mode: Device %sOFF%s", ANSI_GREEN, ANSI_RESET);
 	}else if (tmp_val){
 		if (strcmp(tmp_val, "on") == 0){
 			mpu_sleep(MPU_SLEEP_TEMP_ON);
-			LOG_I("Sleep mode: Temp %sON%s", ANSI_YELLOW, ANSI_RESET);
+			LOG_T("Sleep mode: Temp %sON%s", ANSI_YELLOW, ANSI_RESET);
 		} else if (strcmp(tmp_val, "off") == 0){
 			mpu_sleep(MPU_SLEEP_TEMP_OFF);
-			LOG_I("Sleep mode: Temp %sOFF%s", ANSI_GREEN, ANSI_RESET);
+			LOG_T("Sleep mode: Temp %sOFF%s", ANSI_GREEN, ANSI_RESET);
 		}
 	} else {
 		LOG_E("Invalid argument. Use 'device=on/off' or 'temp=on/off'");
 	}
+    term_busy = false;
 }
 
 void cmd_clear_logs(const char* a){
@@ -85,7 +98,7 @@ void cmd_clear_logs(const char* a){
 	for (int i = 1; i < TERM_CMD_ROW; i++){
 		printf("\033[%d;%dH|", i, TERM_SIDEBAR_COL - 2);
 	}
-	LOG_I("Logs cleared.");
+	LOG_T("Logs cleared.");
 	term_busy = false;
 }
 
@@ -96,7 +109,7 @@ void cmd_uptime(const char* a){
 	uint32_t s  = (t / 1000) % 60;
 	uint32_t m  = (t / 60000) % 60;
 	uint32_t h  = (t / 3600000);
-	LOG_I("System Uptime: %s%02lu:%02lu:%02lu:%03lu%s", ANSI_BRIGHT_CYAN, h, m, s, ms, ANSI_RESET);
+	LOG_T("System Uptime: %s%02lu:%02lu:%02lu:%03lu%s", ANSI_BRIGHT_CYAN, h, m, s, ms, ANSI_RESET);
 }
 
 /** @brief Command: add acc_x acc_y temp ... */
@@ -113,13 +126,13 @@ void cmd_sidebar_add(const char* a){
 	char *name = strtok(buf, " ");
 	while (name != NULL){
 		bool found = false;
-		for (int i = 0; i < WATCH_DICT_COUNT; i++){
+		for (uint8_t i = 0; i < WATCH_DICT_COUNT; i++){
 			if (strcmp(name, watch_dictionary[i].name) == 0){
 				if (term_sidebar_register(watch_dictionary[i].name, 
 							watch_dictionary[i].ptr, 
 							watch_dictionary[i].type, 
 							watch_dictionary[i].unit)){
-					LOG_I("Added: %s", name);
+					LOG_T("Added: %s", name);
 				} else {
 					LOG_E("Sidebar full!");
 				}
@@ -146,7 +159,7 @@ void cmd_sidebar_remove_bulk(const char* a){
 	char *name = strtok(buf, " ");
 	while (name != NULL){
 		if (term_sidebar_remove(name)){
-			LOG_I("Removed: %s", name);
+			LOG_T("Removed: %s", name);
 		} else {
 			LOG_E("Not active: %s", name);
 		}
@@ -156,9 +169,9 @@ void cmd_sidebar_remove_bulk(const char* a){
 
 void cmd_list_vars(const char* a){
 	(void)a;
-	LOG_I("%sAvailable variables for sidebar:%s", ANSI_BOLD, ANSI_RESET);
-	for (int i = 0; i < WATCH_DICT_COUNT; i++){
-		LOG_I(" - %s%-10s%s [%s]", ANSI_YELLOW, watch_dictionary[i].name, ANSI_RESET, watch_dictionary[i].unit);
+	LOG_T("%sAvailable variables for sidebar:%s", ANSI_BOLD, ANSI_RESET);
+	for (uint8_t i = 0; i < WATCH_DICT_COUNT; i++){
+		LOG_T(" - %s%-10s%s [%s]", ANSI_YELLOW, watch_dictionary[i].name, ANSI_RESET, watch_dictionary[i].unit);
 	}
 }
 

@@ -28,47 +28,111 @@
 extern volatile bool term_busy;
 
 /* --- Log Macro Overrides --- */
+#undef DEBUG_ENABLED
+#define DEBUG_ENABLED 0
 #undef LOG_I
-#undef LOG_W
-#undef LOG_E
+#define LOG_I(fmt, ...) do { \
+    term_busy = true; \
+    /* 1. Position and Scroll */ \
+    printf("\033[%d;2H\n\033[%d;2H", TERM_LOG_END, TERM_LOG_END); \
+    /* 2. Print Prefix */ \
+    printf(ANSI_CYAN "[INFO] " ANSI_RESET); \
+    /* 3. Print your message using the declared 'fmt' */ \
+    printf(fmt, ##__VA_ARGS__); \
+    /* 5. Cursor zurück in die Kommandozeile 'verankern' */ \
+    term_focus_cmd(); \
+    term_busy = false; \
+} while(0)
 
-#define LOG_I(...) do { term_busy=true; term_scroll_log(); pico_log(LOG_INFO,  __VA_ARGS__); term_busy=false; } while(0)
-#define LOG_W(...) do { term_busy=true; term_scroll_log(); pico_log(LOG_WARN,  __VA_ARGS__); term_busy=false; } while(0)
-#define LOG_E(...) do { term_busy=true; term_scroll_log(); pico_log(LOG_ERROR, __VA_ARGS__); term_busy=false; } while(0)
+#undef LOG_W
+#define LOG_W(...) do { \
+    term_busy = true; \
+    /* 1. Springe in die Log-Region (unterste Zeile des Scroll-Bereichs) */ \
+    printf("\033[%d;1H", TERM_LOG_END); \
+    /* 3. Gehe zurück zur Zeile TERM_LOG_END, um dort zu schreiben */ \
+    printf("\033[%d;1H", TERM_LOG_END); \
+    /* 4. Eigentlicher Log-Print */ \
+    pico_log(LOG_WARN, __VA_ARGS__); \
+    /* 5. Cursor zurück in die Kommandozeile 'verankern' */ \
+    term_focus_cmd(); \
+    term_busy = false; \
+} while(0)
+
+#undef LOG_E
+#define LOG_E(...) do { \
+    term_busy = true; \
+    /* 1. Springe in die Log-Region (unterste Zeile des Scroll-Bereichs) */ \
+    printf("\033[%d;1H", TERM_LOG_END); \
+    /* 3. Gehe zurück zur Zeile TERM_LOG_END, um dort zu schreiben */ \
+    printf("\033[%d;1H", TERM_LOG_END); \
+    /* 4. Eigentlicher Log-Print */ \
+    pico_log(LOG_ERROR, __VA_ARGS__); \
+    /* 5. Cursor zurück in die Kommandozeile 'verankern' */ \
+    term_focus_cmd(); \
+    term_busy = false; \
+} while(0)
+
+#if DEBUG_ENABLED
+#undef LOG_D
+#define LOG_D(...) do { \
+    term_busy = true; \
+    /* 1. Springe in die Log-Region (unterste Zeile des Scroll-Bereichs) */ \
+    printf("\033[%d;1H", TERM_LOG_END); \
+    /* 3. Gehe zurück zur Zeile TERM_LOG_END, um dort zu schreiben */ \
+    printf("\033[%d;1H", TERM_LOG_END); \
+    /* 4. Eigentlicher Log-Print */ \
+    pico_log(LOG_DEBUG, __VA_ARGS__); \
+    /* 5. Cursor zurück in die Kommandozeile 'verankern' */ \
+    term_focus_cmd(); \
+    term_busy = false; \
+} while(0)
+#endif
+
+/**
+ * @brief Telemetry/Terminal log macro.
+ * Used for UI feedback (e.g., "Command executed", "Sidebar updated").
+ */
+#define LOG_T(fmt, ...) do { \
+    term_busy = true; \
+	printf("\033[%d;2H\n\033[%d;2H", TERM_LOG_END, TERM_LOG_END); \
+    printf(fmt, ##__VA_ARGS__); \
+    term_focus_cmd(); \
+    term_busy = false; \
+} while(0)
 
 /** @brief Supported data types for sidebar telemetry items. */
 typedef enum { 
-    TYPE_INT,    /**< 16-bit signed integer (int16_t). */
-    TYPE_FLOAT,  /**< 32-bit floating point. */
-    TYPE_STRING  /**< Null-terminated character string. */
+	TYPE_INT,    /**< 16-bit signed integer (int16_t). */
+	TYPE_FLOAT,  /**< 32-bit floating point. */
+	TYPE_STRING  /**< Null-terminated character string. */
 } data_type_t;
 
 /** @brief Structure defining a single telemetry entry in the sidebar. */
 typedef struct {
-    const char* label;
-    void* value_ptr;
-    data_type_t type;
-    const char* unit;
+	const char* label;
+	void* value_ptr;
+	data_type_t type;
+	const char* unit;
 } sidebar_item_t;
 
 /** @brief Helper structure for the "dictionary" of watchable variables. */
 typedef struct {
-    const char* name;
-    void* ptr;
-    data_type_t type;
-    const char* unit;
+	const char* name;
+	void* ptr;
+	data_type_t type;
+	const char* unit;
 } watchable_t;
 
 /** @brief Structure defining a shell command. */
 typedef struct {
-    const char* name;
-    void (*func)(const char* args);
-    const char* help;
-    const char* usage;
+	const char* name;
+	void (*func)(const char* args);
+	const char* help;
+	const char* usage;
 } command_t;
 
 /* --- Public API --- */
-
+void term_focus_cmd(void);
 /** @brief Links hardware variables to the UI configuration. */
 void term_cfg_init(void);
 

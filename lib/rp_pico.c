@@ -22,34 +22,49 @@ bool is_i2c_initialized(i2c_inst_t *i2c) {
 }
 
 /**
- * Reads a character from UART and parses escape sequences.
- * Non-blocking: returns KEY_NONE if no data is available.
+ * @brief Reads a single character from UART/USB and translates ANSI escape sequences.
+ * 
+ * This function handles multi-byte sequences for navigation and editing keys
+ * like Arrows, Home, End, and Delete. It uses a short timeout to differentiate
+ * between a standalone ESC key and the start of a sequence.
+ * 
+ * @return The detected key as @ref key_t.
  */
-key_t get_key() {
-	int c = getchar_timeout_us(0);             /* Get char without waiting */
+key_t get_key(void) {
+    int c = getchar_timeout_us(0);
+    if (c == PICO_ERROR_TIMEOUT) return KEY_NONE;
 
-	if (c == PICO_ERROR_TIMEOUT) return KEY_NONE; /* No input available */
+    /* Handle standard Backspace (ASCII 127 = DEL, ASCII 8 = BS) */
+    if (c == 127 || c == 8) return KEY_BACKSPACE;
 
-	if (c == 13 || c == 10) {
-		return KEY_ENTER;
-	}
+    /* Handle ANSI Escape Sequences (starting with ESC [ ...) */
+    if (c == 27) { 
+        /* Short wait to see if more bytes follow the ESC */
+        c = getchar_timeout_us(1000); 
+        if (c == '[') {
+            c = getchar_timeout_us(1000);
+            switch (c) {
+                case 'A': return KEY_UP;
+                case 'B': return KEY_DOWN;
+                case 'C': return KEY_RIGHT;
+                case 'D': return KEY_LEFT;
+                case 'H': return KEY_HOME;
+                case 'F': return KEY_END;
+                case '3': 
+                    /* Special handling for DELETE (ESC [ 3 ~) */
+                    if (getchar_timeout_us(1000) == '~') return KEY_DELETE;
+                    break;
+                default: 
+                    /* Unknown sequence: consume and return NONE or ESC */
+                    return KEY_ESC; 
+            }
+        }
+        /* If only ESC was pressed (no '[' followed) */
+        return KEY_ESC;
+    }
 
-	if (c == 27) {                             /* Possible Escape Sequence */
-		int next1 = getchar_timeout_us(1000);  /* Check for '[' */
-		int next2 = getchar_timeout_us(1000);  /* Check for direction char */
-
-		if (next1 == '[') {
-			switch (next2) {
-				case 'A': return KEY_UP;       /* ESC[A = Up */
-				case 'B': return KEY_DOWN;     /* ESC[B = Down */
-				case 'C': return KEY_RIGHT;    /* ESC[C = Right */
-				case 'D': return KEY_LEFT;     /* ESC[D = Left */
-			}
-		}
-		return KEY_ESC;                        /* Just the ESC key */
-	}
-
-	return (key_t)c;                           /* Return regular ASCII char */
+    /* Return standard ASCII character */
+    return (key_t)c;
 }
 
 void pico_log(log_level_t level, const char *fmt, ...){
@@ -68,10 +83,10 @@ void pico_log(log_level_t level, const char *fmt, ...){
 
 	// 4. Set color and prefix based on level
 	switch (level) {
-		case LOG_INFO:  printf(ANSI_GREEN  "[INFO]  " ANSI_RESET); break;
-		case LOG_WARN:  printf(ANSI_YELLOW "[WARN]  " ANSI_RESET); break;
+		case LOG_INFO:  printf(ANSI_GREEN  "[INFO] " ANSI_RESET); break;
+		case LOG_WARN:  printf(ANSI_YELLOW "[WARN] " ANSI_RESET); break;
 		case LOG_ERROR: printf(ANSI_RED    "[ERROR] " ANSI_RESET); break;
-		case LOG_DEBUG: printf(ANSI_ITALIC ANSI_CYAN   "[DEBUG] " ANSI_RESET); break;
+		case LOG_DEBUG: printf(ANSI_ITALIC ANSI_CYAN "[DEBUG] " ANSI_RESET); break;
 	}
 
 	// 5. Process the actual message (like printf)
