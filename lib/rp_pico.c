@@ -40,9 +40,7 @@ key_t get_key(void) {
     /* Handle ANSI Escape Sequences (starting with ESC [ ...) */
     if (c == 27) { 
         /* Short wait to see if more bytes follow the ESC */
-        c = getchar_timeout_us(1000); 
         if (c == '[') {
-            c = getchar_timeout_us(1000);
             switch (c) {
                 case 'A': return KEY_UP;
                 case 'B': return KEY_DOWN;
@@ -52,7 +50,7 @@ key_t get_key(void) {
                 case 'F': return KEY_END;
                 case '3': 
                     /* Special handling for DELETE (ESC [ 3 ~) */
-                    if (getchar_timeout_us(1000) == '~') return KEY_DELETE;
+                    if (getchar_timeout_us(10) == '~') return KEY_DELETE;
                     break;
                 default: 
                     /* Unknown sequence: consume and return NONE or ESC */

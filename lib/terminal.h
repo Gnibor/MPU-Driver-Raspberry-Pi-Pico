@@ -24,11 +24,11 @@
  * @name UI Geometry Definitions
  * @{
  */
-#define TERM_WIDTH        130  /**< Total character width of the terminal. */
-#define TERM_SIDEBAR_COL  90   /**< Starting column for the static telemetry sidebar. */
+#define TERM_WIDTH        150  /**< Total character width of the terminal. */
+#define TERM_SIDEBAR_COL  120   /**< Starting column for the static telemetry sidebar. */
 #define TERM_LOG_START    1    /**< First row of the scrolling log region. */
-#define TERM_LOG_END      35   /**< Last row of the scrolling log region. */
-#define TERM_CMD_ROW      36   /**< Row index for the persistent command-line prompt. */
+#define TERM_LOG_END      39   /**< Last row of the scrolling log region. */
+#define TERM_CMD_ROW      40   /**< Row index for the persistent command-line prompt. */
 #define TERM_MAX_HISTORY  10   /**< Number of commands to store in history. */
 #define TERM_CMD_MAX_LEN  64   /**< Maximum length per command string. */
 #define TERM_SIDEBAR_MAX  20   /**< Maximum number of dynamic sidebar items. */
@@ -46,16 +46,15 @@ extern volatile bool term_busy;
 #undef LOG_I
 /** @brief Compact Information Log. No timestamp, cyan [INFO] prefix. */
 #define LOG_I(fmt, ...) do { \
-	term_busy = true; \
-	/* 1. Position and Scroll */ \
-	printf("\033[%d;2H\n\033[%d;2H", TERM_LOG_END, TERM_LOG_END); \
-	/* 2. Print Prefix */ \
-	printf(ANSI_CYAN "[INFO] " ANSI_RESET); \
-	/* 3. Print your message using the declared 'fmt' */ \
-	printf(fmt, ##__VA_ARGS__); \
-	/* 5. Anchor cursor back to command line */ \
-	term_focus_cmd(); \
-	term_busy = false; \
+    term_busy = true; \
+    /* 1. Push to Terminal Scrollback (Hidden Jump) */ \
+    printf("\033[500;1H\n"); /* Jump very far down and trigger a scroll */ \
+    printf("[INFO] " fmt "\n", ##__VA_ARGS__); \
+    /* 2. Standard TUI Render (Visible Zone) */ \
+    printf("\033[%d;2H\n\033[%d;2H", TERM_LOG_END, TERM_LOG_END); \
+    printf(ANSI_CYAN "[INFO] " ANSI_RESET fmt, ##__VA_ARGS__); \
+    term_focus_cmd(); \
+    term_busy = false; \
 } while(0)
 
 #undef LOG_W

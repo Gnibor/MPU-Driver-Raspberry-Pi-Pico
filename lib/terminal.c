@@ -124,7 +124,7 @@ void term_init(){
  */
 void term_focus_cmd(){
 	/* Offset by 11 chars to account for the "COMMAND > " prompt prefix */
-	printf("\033[%d;%dH", TERM_CMD_ROW + 1, 11 + cursor_pos);
+	printf("\033[%d;%dH", TERM_CMD_ROW + 1, 12 + cursor_pos);
 	/* Enable blinking cursor for the user */
 	printf("\033[?25h");
 	fflush(stdout);
@@ -145,7 +145,7 @@ void term_update_sidebar(){
 	/* Refresh vertical line and clear potential log overflows to the right */
 	for(int i=1; i<TERM_CMD_ROW; i++){
 		printf("\033[%d;%dH│", i, TERM_SIDEBAR_COL - 2);
-		printf("\033[K");
+		if(i<sidebar_dynamic_count) printf("\033[K");
 	}
 
 	/* Render all active telemetry items */
@@ -197,7 +197,7 @@ bool term_sidebar_remove(const char* label){
  * @brief Moves the cursor to the bottom of the log scrolling region.
  */
 void term_scroll_log(){
-	printf("\033[%d;1H", TERM_LOG_END);
+	printf("\033[%d;2H", TERM_LOG_END);
 	fflush(stdout);
 }
 
@@ -303,7 +303,7 @@ static void _handle_edit(key_t key){
 		cmd_buffer[cmd_idx] = '\0';
 	}
 	/* CHARACTER INPUT: Insert printable ASCII characters */
-	else if (key >= 32 && key <= 126 && cmd_idx < TERM_CMD_MAX_LEN - 1){
+	else if (key >= 32 && key <= 126 && cmd_idx < TERM_CMD_MAX_LEN - 2){
 		/* Shift subsequent characters right to make space for the new character */
 		for (int i = cmd_idx; i > cursor_pos; i--) cmd_buffer[i] = cmd_buffer[i - 1];
 		cmd_buffer[cursor_pos] = (char)key;
@@ -348,12 +348,13 @@ static void term_render_cmd_line(){
 	printf("\033[s"); /* Save current terminal cursor (e.g., in sidebar) */
 
 	/* Jump to prompt row, clear it, and print current buffer content */
-	printf("\033[%d;1H" ANSI_CLR_LINE, TERM_CMD_ROW + 1);
-	printf(ANSI_BOLD "COMMAND" ANSI_RESET " > %s", cmd_buffer);
+	printf("\033[%d;2H" ANSI_CLR_LINE, TERM_CMD_ROW + 1);
+	printf(ANSI_BOLD "COMMAND" ANSI_RESET " > ");
 
+	fwrite(cmd_buffer, 1, cmd_idx, stdout);
 	/* Precisely position the hardware cursor to the logical edit spot */
 	/* Account for prompt string length "COMMAND > " (11 chars) */
-	printf("\033[%d;%dH", TERM_CMD_ROW + 1, 11 + cursor_pos);
+	printf("\033[%d;%dH", TERM_CMD_ROW + 1, 12 + cursor_pos);
 
 	/* Re-enable blinking cursor for input visibility */
 	printf("\033[?25h");

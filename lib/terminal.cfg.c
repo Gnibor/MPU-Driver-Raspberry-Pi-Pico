@@ -43,14 +43,46 @@ void cmd_mpu_status(const char* a){
 	LOG_T("MPU6050 is %sONLINE%s", ANSI_GREEN, ANSI_RESET);
 }
 
-/** @brief Command: calib [samples] -> Triggers MPU calibration for Accel-Z and Gyros. */
+/**
+ * @brief Command: calib [x/y/z] [samples]
+ * Logic: Iterates through arguments to find an axis and/or a numeric sample count.
+ */
 void cmd_mpu_calibrate(const char* a){
-	uint8_t samples = 50;
-	if (a != NULL) samples = (uint8_t)atoi(a);
+	uint8_t samples = 50;           // Default fallback
+	mpu_sensor_t axis = MPU_ACCEL; // Default fallback (Gravity on Z)
 
-	LOG_T("Starting calibration with %u samples...", samples);
-	mpu_calibrate((MPU_ACCEL_Z | MPU_GYRO), samples);
-	LOG_T("Calibration finished.");
+	if (a != NULL) {
+		char buf[TERM_CMD_MAX_LEN];
+		strncpy(buf, a, sizeof(buf) - 1);
+		buf[sizeof(buf) - 1] = '\0'; // Safety null-termination
+
+		char *token = strtok(buf, " ");
+		while (token != NULL) {
+			/* 1. Check for Axis Identifier */
+			if (strcmp(token, "x") == 0)      axis = MPU_ACCEL_X;
+			else if (strcmp(token, "y") == 0) axis = MPU_ACCEL_Y;
+			else if (strcmp(token, "z") == 0) axis = MPU_ACCEL_Z;
+
+			/* 2. Check if the first character is a digit (indicates a number) */
+			else if (token[0] >= '0' && token[0] <= '9') {
+				samples = (uint8_t)atoi(token);
+			}
+
+			token = strtok(NULL, " ");
+		}
+	}
+
+	/* Formatting for the feedback log */
+	char axis_label = (axis == MPU_ACCEL_X) ? 'X' : (axis == MPU_ACCEL_Y ? 'Y' : 'Z');
+
+	if(axis == MPU_ACCEL) LOG_T("Calibrating offsets %sWITHOUT%s gravity compensation...", ANSI_CYAN, ANSI_RESET);
+	else LOG_T("Calibrating offsets with %s1g Gravity on %c-Axis%s (%u samples)...",
+			ANSI_YELLOW, axis_label, ANSI_RESET, samples);
+
+	/* Call the driver with selected axis and samples */
+	mpu_calibrate((axis | MPU_GYRO), samples);
+
+	LOG_T("Calibration %sfinished%s.", ANSI_GREEN, ANSI_RESET);
 }
 
 /** @brief Command: reset -> Performs a full hardware reset and recovery of the sensor. */
@@ -73,7 +105,7 @@ void cmd_reset(const char* a){
 /** @brief Command: sleep [on/off/temp=on/off] -> Manages power modes of the sensor. */
 void cmd_sleep(const char* a){
 	if (a == NULL){
-		LOG_W("Usage: sleep device=on/off OR temp=on/off");
+		LOG_W("Usage: sleep [on/off] OR temp=[on/off]");
 		return;
 	}
 	term_busy = true;
@@ -97,7 +129,7 @@ void cmd_sleep(const char* a){
 			LOG_T("Sleep mode: Temp %sOFF%s", ANSI_GREEN, ANSI_RESET);
 		}
 	} else {
-		LOG_E("Invalid argument. Use 'device=on/off' or 'temp=on/off'");
+		LOG_E("Invalid argument. Use [on/off] OR temp=[on/off]");
 	}
 	term_busy = false;
 }
@@ -197,6 +229,13 @@ void cmd_list_vars(const char* a){
 /** @brief Command: banner -> Redraws the startup info banner. */
 void cmd_print_banner(const char* a){ (void)a; term_print_banner(); }
 
+/** @brief Command: init -> Re-initializes the TUI and returns to dashboard. */
+void cmd_term_init(const char* a) {
+    (void)a;
+    term_init();
+    LOG_T("Terminal UI restored.");
+}
+
 /* --- Shell Command Registry --- */
 /**
  * @brief Global command table mapping shell names to C functions.
@@ -209,9 +248,10 @@ command_t command_config[] = {
 	{"clear",  cmd_clear_logs,     "Clear the log area", NULL},
 	{"uptime", cmd_uptime,         "Show system uptime", NULL},
 	{"status", cmd_mpu_status,     "Show MPU status", NULL},
-	{"calib",  cmd_mpu_calibrate,  "Start calibration", "[samples]"},
+	{"calib",  cmd_mpu_calibrate,  "Start calibration", "[x/y/z] [samples]"},
 	{"sleep",  cmd_sleep,          "Set sleep mode", "on/off/temp=on/off"},
 	{"banner", cmd_print_banner,   "Print startup banner", NULL},
+	{"init", cmd_term_init, "Return to TUI dashboard mode",  NULL},
 	{"reset",  cmd_reset,          "Perform system reboot", NULL}
 };
 /** @brief Total count of registered shell commands. */
