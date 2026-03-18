@@ -23,6 +23,7 @@
  * @see https://github.com/Gnibor/MPU-Driver-Raspberry-Pi-Pico
  */
 #include "hardware/gpio.h"
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include "mpu.h"
@@ -150,9 +151,9 @@ bool mpu_use_struct(mpu_s *device){
  */
 bool mpu_write_register(uint8_t *data, uint8_t how_many, bool nostop){
 	if(!g_mpu){
-		return false;
 		LOG_E("mpu_write_register(): empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
 		LOG_I("mpu_write_register(): use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		return false;
 	}
 	g_mpu_ret_cache = _i2c_write_buffer(&g_i2c, g_mpu->conf.addr, data, how_many, nostop);
 	if(g_mpu_ret_cache){
@@ -181,9 +182,9 @@ bool mpu_write_register(uint8_t *data, uint8_t how_many, bool nostop){
  */
 bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many){
 	if(!g_mpu){
-		return false;
 		LOG_E("mpu_read_register(): empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
 		LOG_I("mpu_read_register(): use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		return false;
 	}
 
 	if(!mpu_write_register(&reg, 1, true)){
@@ -214,21 +215,22 @@ bool mpu_who_am_i(void){
 		return false;
 	}
 
-	if(gc_mpu[0] == MPU60X0_WHO_AM_I){
-		LOG_I("mpu_who_am_i(): device is a MPU60X0 (0x%02X)", gc_mpu[0]);
-		return true;
-	}else if(gc_mpu[0] == MPU9250_WHO_AM_I){
-		LOG_I("mpu_who_am_i(): device is a MPU9250 (0x%02X)", gc_mpu[0]);
-		return true;
-	}else if(gc_mpu[0] == MPU9255_WHO_AM_I){
-		LOG_I("mpu_who_am_i(): device is a MPU9255 (0x%02X)", gc_mpu[0]);
-		return true;
-	}else if(gc_mpu[0] == MPU6500_WHO_AM_I){
-		LOG_I("mpu_who_am_i(): device is a MPU6500 (0x%02X)", gc_mpu[0]);
-		return true;
-	}else{
-		LOG_E("mpu_who_am_i(): device is not a MPU (0x%02X)", gc_mpu[0]);
-		return false;
+	switch (gc_mpu[0]) {
+		case MPU60X0_WHO_AM_I:
+		    LOG_I("mpu_who_am_i(): device is a MPU60X0 (0x%02X)", gc_mpu[0]);
+		    return true;
+		case MPU9250_WHO_AM_I:
+		    LOG_I("mpu_who_am_i(): device is a MPU9250 (0x%02X)", gc_mpu[0]);
+		    return true;
+		case MPU9255_WHO_AM_I:
+		    LOG_I("mpu_who_am_i(): device is a MPU9255 (0x%02X)", gc_mpu[0]);
+		    return true;
+		case MPU6500_WHO_AM_I:
+		    LOG_I("mpu_who_am_i(): device is a MPU6500 (0x%02X)", gc_mpu[0]);
+		    return true;
+		default:
+		    LOG_E("mpu_who_am_i(): device is not a recognized MPU (0x%02X)", gc_mpu[0]);
+		    return false;
 	}
 }
 
@@ -630,9 +632,9 @@ bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr){
  */
 bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 	if(!g_mpu){
-		return false;
 		LOG_E("mpu_calibrate(): empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
 		LOG_I("mpu_calibrate(): use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		return false;
 	}
 
 	int64_t sum_x = 0; // cache
@@ -649,9 +651,9 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 				return false;
 			}
 
-			g_mpu->v.gyro.raw.x = (gc_mpu[0]  << 8) | gc_mpu[1]; // Store x axis output in gyro.raw.x
-			g_mpu->v.gyro.raw.y = (gc_mpu[2]  << 8) | gc_mpu[3]; // Store y axis output in gyro.raw.y
-			g_mpu->v.gyro.raw.z = (gc_mpu[4]  << 8) | gc_mpu[5]; // Store z axis output in gyro.raw.z
+			g_mpu->v.gyro.raw.x = (int16_t)(gc_mpu[0]  << 8) | gc_mpu[1]; // Store x axis output in gyro.raw.x
+			g_mpu->v.gyro.raw.y = (int16_t)(gc_mpu[2]  << 8) | gc_mpu[3]; // Store y axis output in gyro.raw.y
+			g_mpu->v.gyro.raw.z = (int16_t)(gc_mpu[4]  << 8) | gc_mpu[5]; // Store z axis output in gyro.raw.z
 
 			sum_x += g_mpu->v.gyro.raw.x; // Add x axis output to sum_x
 			sum_y += g_mpu->v.gyro.raw.y; // Add y axis output to sum_y
@@ -681,9 +683,9 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 				return false;
 			}
 
-			g_mpu->v.accel.raw.x = (gc_mpu[0]  << 8) | gc_mpu[1]; // Store x axis output in accel.raw.x
-			g_mpu->v.accel.raw.y = (gc_mpu[2]  << 8) | gc_mpu[3]; // Store y axis output in accel.raw.y
-			g_mpu->v.accel.raw.z = (gc_mpu[4]  << 8) | gc_mpu[5]; // Store z axis output in accel.raw.z
+			g_mpu->v.accel.raw.x = (int16_t)(gc_mpu[0]  << 8) | gc_mpu[1]; // Store x axis output in accel.raw.x
+			g_mpu->v.accel.raw.y = (int16_t)(gc_mpu[2]  << 8) | gc_mpu[3]; // Store y axis output in accel.raw.y
+			g_mpu->v.accel.raw.z = (int16_t)(gc_mpu[4]  << 8) | gc_mpu[5]; // Store z axis output in accel.raw.z
 
 			sum_x += g_mpu->v.accel.raw.x; // Add x axis output to sum_x
 			sum_y += g_mpu->v.accel.raw.y; // Add y axis output to sum_y
@@ -744,9 +746,9 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
  */
 bool mpu_read_sensor(mpu_sensor_t sensor){
 	if(!g_mpu){
-		return false;
 		LOG_E("mpu_read_sensor(): empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
 		LOG_I("mpu_read_sensor(): use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		return false;
 	}
 
 	uint8_t mask = (sensor & MPU_ALL); // A mask where only sensor bits are given
