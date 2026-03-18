@@ -7,81 +7,74 @@ Lightweight C driver for the **MPU-60X0** 6-axis IMU designed for the **Raspberr
 ## Project Note
 This is my first project in almost a decade. My focus is on:
 
-- Clean low-level implementation  
-- Transparent register control  
-- Minimal abstraction  
-- Explicit configuration  
-- Expandability toward full MPU-60X0 feature coverage  
+- Clean low-level implementation
+- Transparent register control
+- Minimal abstraction
+- Explicit configuration
+- Expandability toward full MPU-60X0 feature coverage
 
 ---
 
 ## Requirements
-- Raspberry Pi pico-sdk  
-- Raspberry Pi Pico toolchain  
-- CMake-based build environment  
+- Raspberry Pi pico-sdk
+- Raspberry Pi Pico toolchain
+- CMake-based build environment
 
-Dependencies: **hardware/i2c**, **hardware/gpio**, **string** and for the example **stdio**  
+Dependencies: **hardware/i2c**, **hardware/gpio**, **string** and for the example **stdio**
 
 ---
 
 ## Badges
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)  ![Platform: RP2040](https://img.shields.io/badge/Platform-Rraspberry_Pi_Pico-blue)  ![Language: C](https://img.shields.io/badge/Language-C-informational)  ![Interface: I2C](https://img.shields.io/badge/Interface-I²C-orange)  
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)  ![Platform: RP2040](https://img.shields.io/badge/Platform-Rraspberry_Pi_Pico-blue)  ![Language: C](https://img.shields.io/badge/Language-C-informational)  ![Interface: I2C](https://img.shields.io/badge/Interface-I²C-orange)
 
 ---
 
 ## Features (Current Implementation)
-- I²C communication (400 kHz)  
-- WHO_AM_I device verification  
-- Device reset and wake-up  
-- Clock source selection  
-- Sample rate divider selection  
-- DLPF Configuration  
-- Accelerometer & Gyroscope Full-Scale-Range configuration  
-- Standby control per axis  
-- Sleep mode all or temperatur  
-- Full Cycle mode configuration with Low Power  
-- Gyroscope zero-offset calibration  
-- Raw + scaled sensor output: Acceleration in ***g***, Angular velocity in ***°/s***, Temperature in ***°C***  
-- No dynamic memory allocation  
-- Fully configurable via macros  
-
----
-
-## Experimental
-
-### Interrupt Configuration & Handling
-- INT_ENABLE register configuration  
-- INT_STATUS decoding  
-- Data-ready interrupt support  
-- External GPIO interrupt integration  
-- Interrupt-driven sampling  
+- I²C communication (400 kHz)
+- WHO_AM_I device verification
+- Device reset and wake-up
+- Clock source selection
+- Sample rate divider selection
+- DLPF Configuration
+- Accelerometer & Gyroscope Full-Scale-Range configuration
+- Standby control per axis
+- Sleep mode all or temperatur
+- Full Cycle mode configuration with Low Power
+- Gyroscope zero-offset calibration
+- Raw + scaled sensor output: Acceleration in ***g***, Angular velocity in ***°/s***, Temperature in ***°C***
+- No dynamic memory allocation
+- Fully configurable via macros
+- INT_ENABLE register configuration
+- INT_STATUS decoding
+- Data-ready interrupt support
+- Interrupt-driven sampling
 
 ---
 
 ## Development Plan
 
 ### I2C Slave (I2C_SLVx) Configuration
-- External sensor passthrough  
-- I2C_SLV0–I2C_SLV4 setup  
-- Master mode configuration  
+- External sensor passthrough
+- I2C_SLV0–I2C_SLV4 setup
+- Master mode configuration
 
 ### FIFO Support
-- FIFO_EN configuration  
-- FIFO_COUNT handling  
-- Burst read from FIFO  
-- Continuous buffered sampling mode  
+- FIFO_EN configuration
+- FIFO_COUNT handling
+- Burst read from FIFO
+- Continuous buffered sampling mode
 
 ### Complete Register Coverage
-- Structured access to all MPU-6000/MPU-6050 registers  
-- Optional register debug dump function  
+- Structured access to all MPU-6000/MPU-6050 registers
+- Optional register debug dump function
 
 ---
 
 ## Hardware
-- Raspberry Pi Pico (RP2040/RP2350)  
-- MPU-60X0 (GY-521)  
-- I²C wiring (default): SDA → GPIO 6, SCL → GPIO 7  
-- Interrupt pin (default): 26  
+- Raspberry Pi Pico (RP2040/RP2350)
+- MPU-60X0 (GY-521)
+- I²C wiring (default): SDA → GPIO 6, SCL → GPIO 7
+- Interrupt pin (default): 26
 
 ---
 
@@ -134,7 +127,7 @@ int main(void)
 ---
 
 ## API Overview
- 
+
 ### Initialization
 
 ```c
@@ -161,14 +154,6 @@ And set 'device' as active.
 | `bool mpu_read_sensor(mpu_sensor_s)` | Reads sensor data (raw or scaled) |
 | `bool mpu_calibrate_gyro(samples)` | Computes `samples` **(5-20)** time to calculate gyro zero-offset |
 | `bool mpu_cycle_mode(mpu_cycle_t, mpu_lp_wake_t)` | Activate/deactivate **cycle** mode with **low power** option and set the `mpu_lp_wake_t` |
-
-#### Interrupt Functions (Experimental)
-
-If you wanna use interrupts `#define MPU_INT_PIN` can not be `0`.
-And if you wan't interrupt pin pull-up set `#define MPU_INT_PULLUP` to `1`.
-
-| Function | Description |
-|----------|------------|
 | `bool mpu_int_pin_cfg(mpu_int_pin_cfg_t)` | Configures the interrupt pin choosen with `mpu_int_pin_cfg_t` |
 | `bool mpu_int_enable(mpu_int_enable_t)` | Enables interrupts choosen with `mpu_int_enable_t` |
 | `bool mpu_int_status(void)` | Reads the INT_STATUS register and returns `true` if any is set |
@@ -203,7 +188,7 @@ g = raw / fsr_divider
 
 MIT License
 
-Copyright (c) 2026  
+Copyright (c) 2026
 (Gnibor) Robin Gerhartz
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -228,7 +213,7 @@ https://github.com/Gnibor/MPU60X0_RaspberryPi_Pico
 
 ## Status
 
-Not complete yet but functional implementation.  
+Not complete yet but functional implementation.
 Actively developed toward full MPU-6050 feature support.
 
 Contributions, suggestions and improvements (especially with the Interrupt thing) are welcome.
