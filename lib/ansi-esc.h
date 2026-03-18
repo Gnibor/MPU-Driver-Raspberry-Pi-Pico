@@ -7,10 +7,10 @@
 /**
  * @file ansi-esc.h
  * @brief THE ULTIMATE TERMINAL CONTROL & TUI LIBRARY (v6.0 - Final Master)
- * 
- * This header is designed to be the "Single Source of Truth" for terminal 
+ *
+ * This header is designed to be the "Single Source of Truth" for terminal
  * manipulation on both Linux (for your TUI) and RP Pico (for serial feedback).
- * 
+ *
  * ARCHITECTURE:
  * 1. C0 CONTROLS: Single ASCII bytes for fundamental movements (Fastest).
  * 2. STATIC MACROS: Compile-time strings for fixed UI elements (Zero overhead).
@@ -18,7 +18,7 @@
  * 4. BUILDER FUNCTIONS: Safe snprintf wrappers to store sequences in variables.
  */
 
-/* --- 1. ASCII C0 CONTROL CHARACTERS --- 
+/* --- 1. ASCII C0 CONTROL CHARACTERS ---
  * These are the most basic commands. Every terminal emulator supports them.
  */
 /** @{ */
@@ -179,9 +179,9 @@ static inline void ansi_set_title(const char* t)	{ printf("\033]0;%s\007", t); f
 /** @brief Request current cursor position. Terminal writes answer to STDIN as ESC[row;colR. */
 static inline void ansi_req_cursor_pos(void)		{ printf("\033[6n"); fflush(stdout); }
 
-/** 
+/**
  * @brief START BATCH UPDATE: Terminal stops rendering until BATCH_END.
- * Eliminates flickering in high-speed TUIs or animations. 
+ * Eliminates flickering in high-speed TUIs or animations.
  */
 #define ANSI_BATCH_START    "\033[?2026h"
 /** @brief END BATCH UPDATE: Force render all changes at once. */
@@ -267,7 +267,7 @@ static inline void ansi_req_cursor_pos(void)		{ printf("\033[6n"); fflush(stdout
  * @param row Pointer to store the row (y).
  * @param col Pointer to store the column (x).
  * @return 0 on success, -1 on failure.
- * 
+ *
  * HOW IT WORKS:
  * 1. We switch the terminal to 'Raw Mode' (no waiting for Enter).
  * 2. We send the request command (ESC[6n).

@@ -1,6 +1,8 @@
 #ifndef RP_PICO_H
 #define RP_PICO_H
 #include "hardware/i2c.h"
+#include "i2c.h"
+
 #define DEBUG_ENABLED 0
 #define LOG_NEW_LINE 1
 

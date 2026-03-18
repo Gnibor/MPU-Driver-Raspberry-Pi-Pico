@@ -173,7 +173,7 @@ typedef struct mpu_s{
 	// === Configuration ===
 	// =====================
 	struct{
-		i2c_hw_t *i2c_port;
+		i2c_hw_t *i2c_hw;
 		mpu_addr_t addr; // Device Address
 		struct{ int32_t x, y, z; } offset_gyro, offset_accel;
 
@@ -185,7 +185,7 @@ extern mpu_s *g_mpu;
 // ============================
 // === Function declaration ===
 // ============================
-mpu_s mpu_init(i2c_hw_t *i2c_port, mpu_addr_t addr);
+mpu_s mpu_init(i2c_hw_t *i2c_hw, mpu_addr_t addr);
 bool mpu_use_struct(mpu_s *device);
 bool mpu_write_register(uint8_t *data, uint8_t how_many, bool nostop);
 bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many);

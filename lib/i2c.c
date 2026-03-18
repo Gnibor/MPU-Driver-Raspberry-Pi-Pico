@@ -3,6 +3,7 @@
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "pico/time.h"
+#include <hardware/structs/i2c.h>
 #include <stdint.h>
 
 /**
@@ -28,13 +29,26 @@ static bool _i2c_wait_for_status(const _i2c_hw_config *cfg, volatile uint32_t *r
 }
 
 /**
- * @brief Checks hardware registers for active Master Mode state.
+ * @brief Internal check to verify if the I2C peripheral is fully initialized.
+ *
+ * Validates the hardware state by checking if the block is out of reset,
+ * enabled at the hardware level, and currently configured in master mode.
+ *
+ * @param cfg Pointer to the custom I2C hardware configuration structure.
+ * @return true  If the peripheral is out of reset, enabled, and in master mode.
+ * @return false If any of the required hardware states are not met.
  */
 bool _i2c_is_initialized(const _i2c_hw_config *cfg) {
-	// Check if the ENABLE bit and MASTER_MODE bit are both set in hardware
-	bool enabled = (cfg->hw->enable & I2C_IC_ENABLE_ENABLE_BITS) != 0;
-	bool master = (cfg->hw->con & I2C_IC_CON_MASTER_MODE_BITS) != 0;
-	return (enabled && master);
+    // 1. Check if the peripheral has been released from the system reset state
+    uint reset_bit = (cfg->hw == i2c0_hw) ? RESETS_RESET_I2C0_BITS : RESETS_RESET_I2C1_BITS;
+    bool reset = !(resets_hw->reset & reset_bit);
+
+    // 2. Check if the ENABLE bit and MASTER_MODE bit are both set in hardware
+    // cfg->hw provides direct access to the register structure (e.g., IC_ENABLE and IC_CON)
+    bool enabled = (cfg->hw->enable & I2C_IC_ENABLE_ENABLE_BITS) != 0;
+    bool master = (cfg->hw->con & I2C_IC_CON_MASTER_MODE_BITS) != 0;
+
+    return (reset && enabled && master);
 }
 
 /**
@@ -96,8 +110,8 @@ void _i2c_init(_i2c_hw_config *cfg) {
 	cfg->hw->enable = 0;
 
 	// Configure: Master Mode, Slave Disabled, Restart Enabled, Fast Mode (0x2)
-	cfg->hw->con = I2C_IC_CON_MASTER_MODE_BITS | 
-		I2C_IC_CON_IC_SLAVE_DISABLE_BITS | 
+	cfg->hw->con = I2C_IC_CON_MASTER_MODE_BITS |
+		I2C_IC_CON_IC_SLAVE_DISABLE_BITS |
 		I2C_IC_CON_IC_RESTART_EN_BITS |
 		(0x2 << I2C_IC_CON_SPEED_LSB);
 

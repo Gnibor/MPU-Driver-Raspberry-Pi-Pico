@@ -1,33 +1,16 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include "hardware/resets.h"
-#include "hardware/structs/i2c.h"
 #include "pico/stdlib.h"
 #include "ansi-esc.h"
 #include "rp_pico.h"
 
 /**
- * Prüft, ob ein I2C-Port (i2c0 oder i2c1) initialisiert und aktiv ist.
- */
-bool is_i2c_initialized(i2c_inst_t *i2c) {
-	// 1. Check: Ist der Block aus dem Reset-Zustand raus?
-	uint reset_bit = (i2c == i2c0) ? RESETS_RESET_I2C0_BITS : RESETS_RESET_I2C1_BITS;
-	bool not_in_reset = !(resets_hw->reset & reset_bit);
-
-	if (!not_in_reset) return false;
-
-	// 2. Check: Ist das Enable-Bit im Hardware-Register des Controllers gesetzt?
-	// i2c_get_hw(i2c) gibt uns direkten Zugriff auf die Register-Struktur
-	return ((i2c_get_hw(i2c)->enable & I2C_IC_ENABLE_ENABLE_BITS) != 0);
-}
-
-/**
  * @brief Reads a single character from UART/USB and translates ANSI escape sequences.
- * 
+ *
  * This function handles multi-byte sequences for navigation and editing keys
  * like Arrows, Home, End, and Delete. It uses a short timeout to differentiate
  * between a standalone ESC key and the start of a sequence.
- * 
+ *
  * @return The detected key as @ref key_t.
  */
 key_t get_key(void) {
@@ -38,9 +21,9 @@ key_t get_key(void) {
     if (c == 127 || c == 8) return KEY_BACKSPACE;
 
     /* Handle ANSI Escape Sequences (starting with ESC [ ...) */
-    if (c == 27) { 
+    if (c == 27) {
         /* Short wait to see if more bytes follow the ESC */
-        c = getchar_timeout_us(1); 
+        c = getchar_timeout_us(1);
         if (c == '[') {
             c = getchar_timeout_us(1);
             switch (c) {
@@ -50,13 +33,13 @@ key_t get_key(void) {
                 case 'D': return KEY_LEFT;
                 case 'H': return KEY_HOME;
                 case 'F': return KEY_END;
-                case '3': 
+                case '3':
                     /* Special handling for DELETE (ESC [ 3 ~) */
                     if (getchar_timeout_us(1) == '~') return KEY_DELETE;
                     break;
-                default: 
+                default:
                     /* Unknown sequence: consume and return NONE or ESC */
-                    return KEY_ESC; 
+                    return KEY_ESC;
             }
         }
         /* If only ESC was pressed (no '[' followed) */
