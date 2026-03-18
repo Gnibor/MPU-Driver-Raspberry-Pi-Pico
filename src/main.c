@@ -27,14 +27,15 @@
  * ================================================================
  */
 #include <stdio.h>
-#include "hardware/gpio.h"
-
+#include "pico/stdlib.h"
 #include "default.h"
 #include "mpu60x0.h"
 #include "MPU60X0_reg_map.h"
 
 int main(void){
-	stdio_init_board();
+	stdio_usb_init();
+	while(!stdio_usb_connected()) sleep_ms(100);
+	
 	//mpu_s mpu = mpu_init(MPU_I2C_PORT, MPU_ADDR_AD0_GND);
 	mpu_s mpu = mpu_init(MPU_I2C_PORT, MPU_ADDR_AD0_GND);
 	mpu_use_struct(&mpu);
@@ -70,7 +71,6 @@ int main(void){
 	//if(mpu_cycle_mode(MPU_CYCLE_ON, MPU_LP_WAKE_5HZ)) printf("Enable Cycle mode!!!\n");
 	sleep_ms(10);
 
-	if(mpu_sleep(MPU_SLEEP_DEVICE_OFF)) printf("sleep is deactivated!\n");
 	// Data ready interrupt activate
 	mpu_int_enable(MPU_INT_MOTION_EN);
 

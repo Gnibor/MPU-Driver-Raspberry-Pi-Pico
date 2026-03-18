@@ -38,7 +38,7 @@
 #include "ansi-esc.h"
 #include "i2c.h"
 #include "mpu60x0.h"
-#include "term.h"
+#include "rp_pico.h"
 
 // ===========================
 // === Function prototypes ===
