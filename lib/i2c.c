@@ -3,8 +3,7 @@
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "pico/time.h"
-#include <hardware/structs/i2c.h>
-#include <stdint.h>
+#include "rp_pico.h" // Contains LOG_I, LOG_E, LOG_W, LOG_D
 
 /**
  * @brief Internal helper to wait for a specific hardware status bit.

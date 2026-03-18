@@ -40,8 +40,9 @@
 #ifndef MPU60X0_H
 #define MPU60X0_H
 
-#include "hardware/i2c.h"
-#include "MPU60X0_reg_map.h"
+#include <stdint.h>
+#include "mpu_reg_map.h"
+#include "rp_pico.h"
 
 // =============================
 // === Configurable Hardware ===

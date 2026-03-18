@@ -26,10 +26,7 @@
  *
  * ================================================================
  */
-#include <stdio.h>
-#include "pico/stdlib.h"
-#include "mpu60x0.h"
-#include "MPU60X0_reg_map.h"
+#include "mpu.h"
 
 int main(void){
 	stdio_usb_init();

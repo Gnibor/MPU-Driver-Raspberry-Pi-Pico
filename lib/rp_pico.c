@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include "pico/stdlib.h"
-#include "ansi-esc.h"
+#include "pico/stdio.h"
 #include "rp_pico.h"
 
 /**

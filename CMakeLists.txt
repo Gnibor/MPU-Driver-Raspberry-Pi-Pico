@@ -20,8 +20,8 @@ add_compile_definitions(
 )
 
 add_executable(${PROJECT_NAME}
+    lib/mpu.c
     lib/i2c.c
-    src/mpu60x0.c
     src/main.c
     lib/rp_pico.c
 )

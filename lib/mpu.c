@@ -28,15 +28,9 @@
  * ================================================================
  */
 #include "hardware/gpio.h"
-#include <hardware/structs/i2c.h>
-#include <pico/time.h>
-#include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
-#include "MPU60X0_reg_map.h"
-#include "ansi-esc.h"
-#include "rp_pico.h"
-#include "mpu60x0.h"
+#include "mpu.h"
 
 // ===========================
 // === Function prototypes ===
@@ -680,11 +674,11 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 
 	}
 	if (mask & MPU_ACCEL){ // Checks if accelerometer should be calibrated
-g_mpu->conf.offset_accel.x = 0;
-g_mpu->conf.offset_accel.y = 0;
-g_mpu->conf.offset_accel.z = 0;
+		g_mpu->conf.offset_accel.x = 0;
+		g_mpu->conf.offset_accel.y = 0;
+		g_mpu->conf.offset_accel.z = 0;
 
-			sum_x = 0; sum_y = 0; sum_z = 0; // Set sum back to `0` in case both sensors got read
+		sum_x = 0; sum_y = 0; sum_z = 0; // Set sum back to `0` in case both sensors got read
 		LOG_I("mpu_calibrate(): starting accel calibration...");
 		for(uint8_t i = 0; i < samples; i++){
 			if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, gc_mpu, 6)){ // Read the accel output

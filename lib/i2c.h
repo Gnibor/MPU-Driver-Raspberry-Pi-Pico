@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "rp_pico.h" // Contains LOG_I, LOG_E, LOG_W, LOG_D
+#include <hardware/structs/i2c.h>
 
 /**
  * @struct _i2c_hw_config
