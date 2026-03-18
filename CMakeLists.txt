@@ -20,15 +20,15 @@ add_compile_definitions(
 )
 
 add_executable(${PROJECT_NAME}
-    lib/mpu.c
+    lib/mpu/mpu.c
     lib/i2c.c
     src/main.c
     lib/rp_pico.c
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/lib/mpu
     ${CMAKE_CURRENT_LIST_DIR}/lib
-    ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
 target_link_libraries(${PROJECT_NAME}
