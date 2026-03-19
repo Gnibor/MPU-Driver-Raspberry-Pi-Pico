@@ -504,6 +504,8 @@ bool mpu_ahpf(mpu_ahpf_t ahpf){
 	return true;
 }
 
+// TODO: get it working and implement the MPU-6500
+// Don't work every time have no idea why...
 /**
  * @brief Sets the MPU-6050 cycle mode for low-power operation.
  *
