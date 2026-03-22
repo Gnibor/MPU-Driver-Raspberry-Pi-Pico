@@ -69,12 +69,12 @@ mpu_s mpu_init(i2c_hw_t *i2c_hw, mpu_addr_t addr){
 
 	if(!i2c_hw){
 		mpu.conf.i2c_hw = i2c1_hw;
-		LOG_W( ANSI_COLOR_FN "mpu_init()" ANSI_RESET ": i2c_port not valid instead "ANSI_ITALIC ANSI_BOLD"i2c1"ANSI_RESET" is used");
+		LOG_W("i2c_hw = NULL, fallback=i2c1");
 	}else mpu.conf.i2c_hw = i2c_hw;
 
 	if(!addr){
 		mpu.conf.addr = MPU_ADDR_AD0_GND;
-		LOG_W( ANSI_COLOR_FN "mpu_init()" ANSI_RESET ": addr not valid instead "ANSI_ITALIC ANSI_BOLD"0x%02X"ANSI_RESET" is used", MPU_ADDR_AD0_GND);
+		LOG_W("invalid addr = 0x%02X, fallback=0x%02X", addr, MPU_ADDR_AD0_GND);
 	}else mpu.conf.addr = addr;
 
 	mpu.conf.fsr_div.accel = 16384.0f;
@@ -88,36 +88,36 @@ mpu_s mpu_init(i2c_hw_t *i2c_hw, mpu_addr_t addr){
 	g_i2c.timeout_us = 1000;
 	if(!_i2c_is_initialized(&g_i2c)){
 		_i2c_init(&g_i2c); // 400 kHz I2C
-		LOG_I( ANSI_COLOR_FN "mpu_init()" ANSI_RESET ": I²C initialized at 400kHz SDA:%d SCL:%d", MPU_SDA_PIN, MPU_SCL_PIN);
+		LOG_I("I2C initialized baudrate=400000 sda=%d scl=%d", MPU_SDA_PIN, MPU_SCL_PIN);
 	}else{
-		LOG_W( ANSI_COLOR_FN "mpu_init()" ANSI_RESET ": I²C is already initialized");
+		LOG_W("I2C already initialized");
 	}
 
 #if MPU_USE_PULLUP
 	gpio_pull_up(MPU_SDA_PIN);
 	gpio_pull_up(MPU_SCL_PIN);
-	LOG_D( ANSI_COLOR_FN "mpu_init()" ANSI_RESET ": I²C pull-up on");
+	LOG_D("I2C pull-up enabled");
 #endif
 
 #if MPU_INT_PIN
 	// Configure optional interrupt pin
 	gpio_init(MPU_INT_PIN);
 	gpio_set_dir(MPU_INT_PIN, GPIO_IN);
-	LOG_I( ANSI_COLOR_FN "mpu_init()" ANSI_RESET ": interrupt pin GPIO%d", MPU_INT_PIN);
+	LOG_I("interrupt pin configured gpio=%d", MPU_INT_PIN);
 #endif
 #if MPU_INT_PULLUP
 	gpio_pull_up(MPU_INT_PIN);
-	LOG_D( ANSI_COLOR_FN "mpu_init()" ANSI_RESET ": MPU_INT_PIN pull-up on");
+	LOG_D("interrupt pin pull-up enabled");
 #endif
 
 	if(!mpu_who_am_i()){
-		LOG_E( ANSI_COLOR_FN "mpu_init()" ANSI_RESET ": failed exec mpu_who_am_i()");
+		LOG_E("mpu_who_am_i() failed");
 		memset(&mpu, 0, sizeof(mpu));
 		return mpu;
 	}
 
 	if(!mpu_sleep(MPU_SLEEP_ALL_OFF)){
-		LOG_E( ANSI_COLOR_FN "mpu_init()" ANSI_RESET ": faild exec mpu_sleep(MPU_SLEEP_ALL_OFF)");
+		LOG_E("mpu_sleep() failed sleep=0x%02X", MPU_SLEEP_ALL_OFF);
 		memset(&mpu, 0, sizeof(mpu));
 	}
 	return mpu;
@@ -135,11 +135,11 @@ mpu_s mpu_init(i2c_hw_t *i2c_hw, mpu_addr_t addr){
  */
 bool mpu_use_struct(mpu_s *device){
 	if (device == NULL){
-		LOG_E( ANSI_COLOR_FN "mpu_use_struct()" ANSI_RESET ":  device = NULL");
+		LOG_E("device = NULL");
 		return false; // Check if device is set
 	}
 	g_mpu = device;
-	LOG_I( ANSI_COLOR_FN "mpu_use_struct()" ANSI_RESET ":  g_mpu got set");
+	LOG_I("g_mpu set");
 
 	return true;
 }
@@ -156,15 +156,15 @@ bool mpu_use_struct(mpu_s *device){
  */
 bool mpu_write_register(uint8_t *data, uint8_t how_many, bool nostop){
 	if(!g_mpu){
-		LOG_E( ANSI_COLOR_FN "mpu_write_register()" ANSI_RESET ":  empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
-		LOG_I( ANSI_COLOR_FN "mpu_write_register()" ANSI_RESET ":  use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		LOG_E("g_mpu = NULL");
+		LOG_I("use mpu_use_struct() to set g_mpu");
 		return false;
 	}
 	g_mpu_ret_cache = _i2c_write_buffer(&g_i2c, g_mpu->conf.addr, data, how_many, nostop);
 	if(g_mpu_ret_cache){
-		LOG_D( ANSI_COLOR_FN "mpu_write_register()" ANSI_RESET ":  %d bytes written to reg 0x%02X", how_many, data[0]);
+		LOG_D("register write ok reg=0x%02X len=%u", data[0], how_many);
 	}else{
-		LOG_E( ANSI_COLOR_FN "mpu_write_register()" ANSI_RESET ":  I²C failed at reg 0x%02X (return: %d)", data[0], how_many);
+		LOG_E("I2C write failed reg=0x%02X len=%u ret=%d", data[0], how_many, g_mpu_ret_cache);
 		return false;
 	}
 
@@ -187,21 +187,21 @@ bool mpu_write_register(uint8_t *data, uint8_t how_many, bool nostop){
  */
 bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many){
 	if(!g_mpu){
-		LOG_E( ANSI_COLOR_FN "mpu_read_register()" ANSI_RESET ":  empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
-		LOG_I( ANSI_COLOR_FN "mpu_read_register()" ANSI_RESET ":  use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		LOG_E("g_mpu = NULL");
+		LOG_I("use mpu_use_struct() to set g_mpu");
 		return false;
 	}
 
 	if(!mpu_write_register(&reg, 1, true)){
-		LOG_E( ANSI_COLOR_FN "mpu_read_register()" ANSI_RESET ":  failed to write reg 0x%02X", reg);
+		LOG_E("register write failed reg=0x%02X", reg);
 		return false;
 	}
 	g_mpu_ret_cache = _i2c_read_buffer(&g_i2c, g_mpu->conf.addr, out, how_many);
 	if(g_mpu_ret_cache){
-		LOG_D( ANSI_COLOR_FN "mpu_read_register()" ANSI_RESET ":  %d bytes read from reg 0x%02X", how_many, reg);
+		LOG_D("register read ok reg=0x%02X len=%u", reg, how_many);
 		return true;
 	}else{
-		LOG_E( ANSI_COLOR_FN "mpu_read_register()" ANSI_RESET ":  I²C failed at reg 0x%02X (return: %d)", reg, how_many);
+		LOG_E("I2C read failed reg=0x%02X len=%u ret=%d", reg, how_many, g_mpu_ret_cache);
 		return false;
 	}
 }
@@ -216,25 +216,25 @@ bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many){
  */
 bool mpu_who_am_i(void){
 	if(!mpu_read_register(MPU_REG_WHO_AM_I, gc_mpu, 1)){
-		LOG_E( ANSI_COLOR_FN "mpu_who_am_i()" ANSI_RESET ":  failed exec mpu_read_register()");
+		LOG_E("mpu_read_register() failed");
 		return false;
 	}
 
 	switch (gc_mpu[0]) {
 		case MPU60X0_WHO_AM_I:
-		    LOG_I( ANSI_COLOR_FN "mpu_who_am_i()" ANSI_RESET ":  device is a MPU60X0 (0x%02X)", gc_mpu[0]);
+		    LOG_I("device detected type=MPU60X0 who_am_i=0x%02X", gc_mpu[0]);
 		    return true;
 		case MPU9250_WHO_AM_I:
-		    LOG_I( ANSI_COLOR_FN "mpu_who_am_i()" ANSI_RESET ":  device is a MPU9250 (0x%02X)", gc_mpu[0]);
+		    LOG_I("device detected type=MPU9250 who_am_i=0x%02X", gc_mpu[0]);
 		    return true;
 		case MPU9255_WHO_AM_I:
-		    LOG_I( ANSI_COLOR_FN "mpu_who_am_i()" ANSI_RESET ":  device is a MPU9255 (0x%02X)", gc_mpu[0]);
+		    LOG_I("device detected type=MPU9255 who_am_i=0x%02X", gc_mpu[0]);
 		    return true;
 		case MPU6500_WHO_AM_I:
-		    LOG_I( ANSI_COLOR_FN "mpu_who_am_i()" ANSI_RESET ":  device is a MPU6500 (0x%02X)", gc_mpu[0]);
+		    LOG_I("device detected type=MPU6500 who_am_i=0x%02X", gc_mpu[0]);
 		    return true;
 		default:
-		    LOG_E("device is not a recognized MPU (0x%02X)", gc_mpu[0]);
+		    LOG_E("device not recognized who_am_i=0x%02X", gc_mpu[0]);
 		    return false;
 	}
 }
@@ -244,7 +244,7 @@ bool mpu_who_am_i(void){
  */
 bool mpu_bypass(bool active){
 	if(!mpu_read_register(MPU_REG_INT_PIN_CFG, gc_mpu, 1)){
-		LOG_E("I²C read failed reg=0x%02X len=1", MPU_REG_INT_PIN_CFG);
+		LOG_E("I2C read failed reg=0x%02X len=1", MPU_REG_INT_PIN_CFG);
 	}
 
 	return true;
@@ -273,7 +273,7 @@ bool mpu_reset(mpu_reset_t reset){
 	// 1. Read current register values into global cache to preserve existing bits
 	// We read 3 bytes starting from SIGNAL_PATH_RESET (likely covering USER_CTRL & PWR_MGMT_1)
 	if (!mpu_read_register(MPU_REG_SIGNAL_PATH_RESET, (uint8_t[]){gc_mpu[1], gc_mpu[2], gc_mpu[3]}, 3)){
-		LOG_E( ANSI_COLOR_FN "mpu_reset()" ANSI_RESET ":  Failed to read reg SIGNAL_PATH_RESET (0x%02X)", MPU_REG_SIGNAL_PATH_RESET);
+		LOG_E("register read failed reg=0x%02X len=3", MPU_REG_SIGNAL_PATH_RESET);
 		return false;
 	}
 
@@ -292,7 +292,7 @@ bool mpu_reset(mpu_reset_t reset){
 
 	// 5. Execution Logic
 	if (reset & MPU_RESET_ALL){
-		LOG_I( ANSI_COLOR_FN "mpu_reset()" ANSI_RESET ":  Starting FULL chip reset sequence...");
+		LOG_I("full chip reset sequence started");
 
 		// Trigger Main Device Reset via PWR_MGMT_1
 		gc_mpu[2] |= MPU_DEVICE_RESET; // Warning: index logic should match your register mapping
@@ -300,24 +300,24 @@ bool mpu_reset(mpu_reset_t reset){
 		sleep_ms(150); // Wait for internal reboot
 
 		// Reset Signal Paths (Analog/Digital Filters)
-		LOG_D( ANSI_COLOR_FN "mpu_reset()" ANSI_RESET ":  Clearing Signal Paths...");
+		LOG_D("signal path reset started");
 		gc_mpu[0] |= (MPU_TEMP_RESET | MPU_ACCEL_RESET | MPU_GYRO_RESET);
 		if (!mpu_write_register((uint8_t[]){MPU_REG_SIGNAL_PATH_RESET, gc_mpu[1]}, 2, false)) return false;
 		sleep_ms(200);
 
 		// Reset User Control (FIFO, I2C Master, Logic)
-		LOG_D( ANSI_COLOR_FN "mpu_reset()" ANSI_RESET ":  Clearing User Control Logic...");
+		LOG_D("user control reset started");
 		gc_mpu[1] |= (MPU_SIG_COND_RESET | MPU_I2C_MST_RESET | MPU_FIFO_RESET);
 		if (!mpu_write_register((uint8_t[]){MPU_REG_USER_CTRL, gc_mpu[2]}, 2, false)) return false;
 		sleep_ms(200);
 
-		LOG_I( ANSI_COLOR_FN "mpu_reset()" ANSI_RESET ":  Full reset complete.");
+		LOG_I("full reset complete");
 	} else {
 		// Partial reset of specific signal paths
-		LOG_I( ANSI_COLOR_FN "mpu_reset()" ANSI_RESET ":  Partial reset requested (Mask: 0x%02X)", reset);
+		LOG_I("partial reset requested mask=0x%02X", reset);
 		gc_mpu[0] = MPU_REG_SIGNAL_PATH_RESET;
 		if (!mpu_write_register(gc_mpu, 4, false)){
-			LOG_E( ANSI_COLOR_FN "mpu_reset()" ANSI_RESET ":  Write failed for partial reset");
+			LOG_E("partial reset write failed");
 			return false;
 		}
 		sleep_ms(100);
@@ -335,36 +335,36 @@ bool mpu_reset(mpu_reset_t reset){
  */
 bool mpu_sleep(mpu_sleep_t sleep){
 	if(!mpu_read_register(MPU_REG_PWR_MGMT_1, gc_mpu, 1)){
-		LOG_E( ANSI_COLOR_FN "mpu_sleep()" ANSI_RESET ":  failed to read reg PWR_MGMT_1 (0x%02X)", MPU_REG_PWR_MGMT_1);
+		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_PWR_MGMT_1);
 		return false;
 	}
 
 	// Sleep Bit
 	if(sleep & MPU_SLEEP_DEVICE_ON){
 		gc_mpu[0] |= MPU_SLEEP;
-		LOG_I( ANSI_COLOR_FN "mpu_sleep()" ANSI_RESET ":  initiating device sleep sequence...");
+		LOG_I("device sleep sequence started");
 	}else if(!(sleep & (MPU_SLEEP_DEVICE_ON << 1))){
 		gc_mpu[0] &= ~MPU_SLEEP;
-		LOG_I( ANSI_COLOR_FN "mpu_sleep()" ANSI_RESET ":  initiating device wake up...");
+		LOG_I("device wake-up sequence started");
 	}
 
 	// Temperature disable Bit
 	if(sleep & MPU_SLEEP_TEMP_ON){
 		gc_mpu[0] |= MPU_TEMP_DIS;
-		LOG_I( ANSI_COLOR_FN "mpu_sleep()" ANSI_RESET ":  initiating temp sleep sequence...");
+		LOG_I("temp sleep sequence started");
 	}else if(!(sleep & (MPU_SLEEP_TEMP_ON << 2))){
 		gc_mpu[0] &= ~MPU_TEMP_DIS;
-		LOG_I( ANSI_COLOR_FN "mpu_sleep()" ANSI_RESET ":  initiating temp wake up...");
+		LOG_I("temp wake-up sequence started");
 	}
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[0]}, 2, false)){
-		LOG_E( ANSI_COLOR_FN "mpu_sleep()" ANSI_RESET ":  failed to write 0x%02X to reg PWR_MGMT_1 (0x%02X)", gc_mpu[0], MPU_REG_PWR_MGMT_1);
+		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_PWR_MGMT_1, gc_mpu[0]);
 		return false;
 	}
 
 	sleep_ms(5); // Activation pause
 
-	LOG_I( ANSI_COLOR_FN "mpu_sleep()" ANSI_RESET ":  done...");
+	LOG_I("sleep config applied");
 
 	return true;
 }
@@ -377,7 +377,7 @@ bool mpu_sleep(mpu_sleep_t sleep){
  */
 bool mpu_stby(mpu_stby_t stby){
 	if(!mpu_read_register(MPU_REG_PWR_MGMT_2, gc_mpu, 1)){
-		LOG_E( ANSI_COLOR_FN "mpu_stby()" ANSI_RESET ":  failed to read reg PWR_MGMT_2 (0x%02X)", MPU_REG_PWR_MGMT_2);
+		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_PWR_MGMT_2);
 		return false;
 	}
 
@@ -385,13 +385,13 @@ bool mpu_stby(mpu_stby_t stby){
 	gc_mpu[0] |= stby;
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_2, gc_mpu[0]}, 2, false)){
-		LOG_E( ANSI_COLOR_FN "mpu_stby()" ANSI_RESET ":  failed to write 0x%02X to reg PWR_MGMT_2 (0x%02X)", gc_mpu[0], MPU_REG_PWR_MGMT_2);
+		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_PWR_MGMT_2, gc_mpu[0]);
 		return false;
 	}
 
 	sleep_ms(5);
 
-	LOG_I( ANSI_COLOR_FN "mpu_stby()" ANSI_RESET ":  written 0x%02X to reg PWR_MGMT_2 (0x%02X)", gc_mpu[0], MPU_REG_PWR_MGMT_2);
+	LOG_I("standby config applied value=0x%02X reg=0x%02X", gc_mpu[0], MPU_REG_PWR_MGMT_2);
 
 	return true;
 }
@@ -405,7 +405,7 @@ bool mpu_stby(mpu_stby_t stby){
  */
 bool mpu_clk_sel(mpu_clk_sel_t clksel){
 	if(!mpu_read_register(MPU_REG_PWR_MGMT_1, gc_mpu, 1)){
-		LOG_E( ANSI_COLOR_FN "mpu_clk_sel()" ANSI_RESET ":  failed to read reg PWR_MGMT_1 (0x%02X)", MPU_REG_PWR_MGMT_1);
+		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_PWR_MGMT_1);
 		return false;
 	}
 
@@ -413,13 +413,13 @@ bool mpu_clk_sel(mpu_clk_sel_t clksel){
 	gc_mpu[0] |= clksel;
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[0]}, 2, false)){
-		LOG_E( ANSI_COLOR_FN "mpu_clk_sel()" ANSI_RESET ":  failed to write 0x%02X to reg PWR_MGMT_1 (0x%02X)", gc_mpu[0], MPU_REG_PWR_MGMT_1);
+		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_PWR_MGMT_1, gc_mpu[0]);
 		return false;
 	}
 
 	sleep_ms(5);
 
-	LOG_I( ANSI_COLOR_FN "mpu_clk_sel()" ANSI_RESET ":  written 0x%02X to reg PWR_MGMT_1 (0x%02X)", gc_mpu[0], MPU_REG_PWR_MGMT_1);
+	LOG_I("clock source applied value=0x%02X reg=0x%02X", gc_mpu[0], MPU_REG_PWR_MGMT_1);
 
 	return true;
 }
@@ -435,7 +435,7 @@ bool mpu_clk_sel(mpu_clk_sel_t clksel){
  */
 bool mpu_dlpf_cfg(mpu_dlpf_cfg_t cfg){
 	if(!mpu_read_register(MPU_REG_CONFIG, gc_mpu, 1)){
-		LOG_E( ANSI_COLOR_FN "mpu_dlpf_cfg()" ANSI_RESET ":  failed to read reg CONFIG (0x%02X)", MPU_REG_CONFIG);
+		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_CONFIG);
 		return false;
 	}
 
@@ -443,13 +443,13 @@ bool mpu_dlpf_cfg(mpu_dlpf_cfg_t cfg){
 	gc_mpu[0] |= cfg;
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_CONFIG, gc_mpu[0]}, 2, false)){
-		LOG_E( ANSI_COLOR_FN "mpu_dlpf_cfg()" ANSI_RESET ":  failed to write 0x%02X to reg CONFIG (0x%02X)", gc_mpu[0], MPU_REG_CONFIG);
+		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_CONFIG, gc_mpu[0]);
 		return false;
 	}
 
 	sleep_ms(5);
 
-	LOG_I( ANSI_COLOR_FN "mpu_dlpf_cfg()" ANSI_RESET ":  written 0x%02X to reg CONFIG (0x%02X)", gc_mpu[0], MPU_REG_CONFIG);
+	LOG_I("dlpf config applied value=0x%02X reg=0x%02X", gc_mpu[0], MPU_REG_CONFIG);
 
 	return true;
 }
@@ -468,13 +468,13 @@ bool mpu_smplrt_div(mpu_smplrt_div_t smplrt_div){
 	gc_mpu[1] = smplrt_div;
 
 	if(!mpu_write_register(gc_mpu, 2, false)){
-		LOG_E( ANSI_COLOR_FN "mpu_smplrt_div()" ANSI_RESET ":  failed to write 0x%02X to reg SMPLRT_DIV (0x%02X)", gc_mpu[1], gc_mpu[0]);
+		LOG_E("register write failed reg=0x%02X value=0x%02X", gc_mpu[0], gc_mpu[1]);
 		return false;
 	}
 
 	sleep_ms(5);
 
-	LOG_I( ANSI_COLOR_FN "mpu_smplrt_div()" ANSI_RESET ":  written 0x%02X to reg SMPLRT_DIV (0x%02X)", gc_mpu[1], gc_mpu[0]);
+	LOG_I("sample rate divider applied value=0x%02X reg=0x%02X", gc_mpu[1], gc_mpu[0]);
 
 	return true;
 }
@@ -495,7 +495,7 @@ bool mpu_smplrt_div(mpu_smplrt_div_t smplrt_div){
  */
 bool mpu_ahpf(mpu_ahpf_t ahpf){
 	if(!mpu_read_register(MPU_REG_ACCEL_CONFIG, gc_mpu, 1)){
-		LOG_E( ANSI_COLOR_FN "mpu_ahpf()" ANSI_RESET ":  failed to read reg ACCEL_CONFIG (0x%02X)", MPU_REG_ACCEL_CONFIG);
+		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_ACCEL_CONFIG);
 		return false;
 	}
 
@@ -504,13 +504,13 @@ bool mpu_ahpf(mpu_ahpf_t ahpf){
 	gc_mpu[0] = MPU_REG_ACCEL_CONFIG;
 
 	if(!mpu_write_register(gc_mpu, 2, false)){
-		LOG_E( ANSI_COLOR_FN "mpu_ahpf()" ANSI_RESET ":  failed to write 0x%02X to reg ACCEL_CONFIG (0x%02X)", gc_mpu[1], gc_mpu[0]);
+		LOG_E("register write failed reg=0x%02X value=0x%02X", gc_mpu[0], gc_mpu[1]);
 		return false;
 	}
 
 	sleep_ms(5);
 
-	LOG_I( ANSI_COLOR_FN "mpu_ahpf()" ANSI_RESET ":  written 0x%02X to reg ACCEL_CONFIG (0x%02X)", gc_mpu[1], gc_mpu[0]);
+	LOG_I("ahpf config applied value=0x%02X reg=0x%02X", gc_mpu[1], gc_mpu[0]);
 
 	return true;
 }
@@ -535,7 +535,7 @@ bool mpu_ahpf(mpu_ahpf_t ahpf){
 bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate){
 	// Read current power management registers (PWR_MGMT_1 and PWR_MGMT_2)
 	if(!mpu_read_register(MPU_REG_PWR_MGMT_1, gc_mpu, 2)){
-		LOG_E( ANSI_COLOR_FN "mpu_cycle_mode()" ANSI_RESET ":  failed to read 2 bytes from reg PWR_MGMT_1 (0x%02X)", MPU_REG_PWR_MGMT_1);
+		LOG_E("register read failed reg=0x%02X len=2", MPU_REG_PWR_MGMT_1);
 		return false;
 	}
 
@@ -551,11 +551,11 @@ bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate){
 
 			gc_mpu[1] |= MPU_STBY_GYRO; // Keep gyro in standby during LP cycle
 
-			LOG_I( ANSI_COLOR_FN "mpu_cycle_mode()" ANSI_RESET ":  initiating low power cycle mode");
+			LOG_I("low power cycle mode started");
 		}
-		LOG_I( ANSI_COLOR_FN "mpu_cycle_mode()" ANSI_RESET ":  initiating cycle mode");
+		LOG_I("cycle mode started");
 	}else{
-		LOG_I( ANSI_COLOR_FN "mpu_cycle_mode()" ANSI_RESET ":  initiating deactivation of cycle mode");
+		LOG_I("cycle mode deactivation started");
 		gc_mpu[0] &= ~MPU_CYCLE;  // Clear CYCLE bit
 		gc_mpu[0] &= ~MPU_TEMP_DIS; // Reactivate temp if it was in standby
 		gc_mpu[1] &= ~MPU_LP_WAKE_40HZ; // Clear LP wake frequency bits
@@ -564,13 +564,13 @@ bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate){
 
 	// Write back updated registers
 	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[0], gc_mpu[1]}, 3, false)){
-		LOG_E( ANSI_COLOR_FN "mpu_cycle_mode()" ANSI_RESET ":  failed to write 0x%02X, 0x%02X to reg PWR_MGMT_1 (0x%02X)", gc_mpu[0], gc_mpu[1], MPU_REG_PWR_MGMT_1);
+		LOG_E("register write failed reg=0x%02X values=0x%02X,0x%02X", MPU_REG_PWR_MGMT_1, gc_mpu[0], gc_mpu[1]);
 		return false;
 	}
 
 	sleep_ms(10); // Activation pause
 
-	LOG_I( ANSI_COLOR_FN "mpu_cycle_mode()" ANSI_RESET ":  initiating complete. written 0x%02X, 0x%02X to reg PWR_MGMT_1 (0x%02X)", gc_mpu[0], gc_mpu[1], MPU_REG_PWR_MGMT_1);
+	LOG_I("cycle mode applied values=0x%02X,0x%02X reg=0x%02X", gc_mpu[0], gc_mpu[1], MPU_REG_PWR_MGMT_1);
 
 	return true;
 }
@@ -594,32 +594,32 @@ bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate){
 bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr){
 	// Read FSR Register
 	if(!mpu_read_register(MPU_REG_GYRO_CONFIG, gc_mpu, 2)){
-		LOG_E( ANSI_COLOR_FN "mpu_fsr()" ANSI_RESET ":  failed to read 2 bytes from reg GYRO_CONFIG (0x%02X)", MPU_REG_GYRO_CONFIG);
+		LOG_E("register read failed reg=0x%02X len=2", MPU_REG_GYRO_CONFIG);
 		return false;
 	}
 
 	// Gyro FSR bits
 	gc_mpu[0] &= ~MPU_FSR_2000DPS; // Delete bits 4:3
 	gc_mpu[0] |= fsr; // Set FSR Bits
-	LOG_I( ANSI_COLOR_FN "mpu_fsr()" ANSI_RESET ":  prepare fsr (0x%02X)", fsr);
+	LOG_I("gyro fsr prepared value=0x%02X", fsr);
 
 	// Automatic scaling calculation:
 	// 131 / 2^bits → sensitivity in °/s
 	g_mpu->conf.fsr_div.gyro = 131.0f / (1 << ((fsr >> 3) & 0x03));
-	LOG_I( ANSI_COLOR_FN "mpu_fsr()" ANSI_RESET ":  FSR_DIV set to %d", g_mpu->conf.fsr_div.gyro);
+	LOG_I("gyro fsr_div set value=%.3f", g_mpu->conf.fsr_div.gyro);
 
 	// Accel FSR bits
 	gc_mpu[1] &= ~MPU_AFSR_16G;
 	gc_mpu[1] |= afsr;
-	LOG_I( ANSI_COLOR_FN "mpu_fsr()" ANSI_RESET ":  prepare afsr (0x%02X)", afsr);
+	LOG_I("accel fsr prepared value=0x%02X", afsr);
 
 	// Automatic scaling calculation (raw / divider = G)
 	g_mpu->conf.fsr_div.accel = 16384.0f / (1 << ((afsr >> 3) & 0x03));
-	LOG_I( ANSI_COLOR_FN "mpu_fsr()" ANSI_RESET ":  AFSR_DIV set to %d", g_mpu->conf.fsr_div.accel);
+	LOG_I("accel afsr_div set value=%.3f", g_mpu->conf.fsr_div.accel);
 
 	// Write back to registers
 	if(!mpu_write_register((uint8_t[]){MPU_REG_GYRO_CONFIG, gc_mpu[0], gc_mpu[1]}, 3, false)){
-		LOG_E( ANSI_COLOR_FN "mpu_fsr()" ANSI_RESET ":  failed to write 0x%02X, 0x%02X to reg GYRO_CONFIG (0x%02X)", gc_mpu[0], gc_mpu[1], MPU_REG_GYRO_CONFIG);
+		LOG_E("register write failed reg=0x%02X values=0x%02X,0x%02X", MPU_REG_GYRO_CONFIG, gc_mpu[0], gc_mpu[1]);
 		return false;
 	}
 
@@ -649,8 +649,8 @@ bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr){
  */
 bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 	if(!g_mpu){
-		LOG_E( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
-		LOG_I( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		LOG_E("g_mpu = NULL");
+		LOG_I("use mpu_use_struct() to set g_mpu");
 		return false;
 	}
 
@@ -661,10 +661,10 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 	uint8_t mask = (sensor & MPU_ALL); // mask where only the sensors bits are given
 
 	if(mask & MPU_GYRO){ // Checks if gyro should be calibrated
-		LOG_I( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  starting gyro calibration...");
+		LOG_I("gyro calibration started");
 		for(uint8_t i = 0; i < samples; i++){
 			if(!mpu_read_register(MPU_REG_GYRO_XOUT_H, gc_mpu, 6)){ // Read the gyro output
-				LOG_E( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  failed to read 6 bytes from reg GYRO_XOUT_H (0x%02X)", MPU_REG_GYRO_XOUT_H);
+				LOG_E("register read failed reg=0x%02X len=6", MPU_REG_GYRO_XOUT_H);
 				return false;
 			}
 
@@ -683,8 +683,8 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 		g_mpu->conf.offset_gyro.y = sum_y / samples; // Store y axis average as offset_gyro.y
 		g_mpu->conf.offset_gyro.z = sum_z / samples; // Store z axis average as offset_gyro.z
 
-		LOG_I( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  gyro calibration done");
-		LOG_D( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  gyro offset x=%d, y=%d, z=%d", g_mpu->conf.offset_gyro.x, g_mpu->conf.offset_gyro.y, g_mpu->conf.offset_gyro.z);
+		LOG_I("gyro calibration done");
+		LOG_D("gyro offset x=%d y=%d z=%d", g_mpu->conf.offset_gyro.x, g_mpu->conf.offset_gyro.y, g_mpu->conf.offset_gyro.z);
 
 	}
 	if (mask & MPU_ACCEL){ // Checks if accelerometer should be calibrated
@@ -693,10 +693,10 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 		g_mpu->conf.offset_accel.z = 0;
 
 		sum_x = 0; sum_y = 0; sum_z = 0; // Set sum back to `0` in case both sensors got read
-		LOG_I( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  starting accel calibration...");
+		LOG_I("accel calibration started");
 		for(uint8_t i = 0; i < samples; i++){
 			if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, gc_mpu, 6)){ // Read the accel output
-				LOG_E( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  failed to read 6 bytes from reg ACCEL_XOUT_H (0x%02X)", MPU_REG_ACCEL_XOUT_H);
+				LOG_E("register read failed reg=0x%02X len=6", MPU_REG_ACCEL_XOUT_H);
 				return false;
 			}
 
@@ -736,8 +736,8 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 				g_mpu->conf.offset_accel.z += 16384;
 		}
 
-		LOG_I( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  accel calibration done");
-		LOG_D( ANSI_COLOR_FN "mpu_calibrate()" ANSI_RESET ":  accel offset x=%d, y=%d, z=%d", g_mpu->conf.offset_accel.x, g_mpu->conf.offset_accel.y, g_mpu->conf.offset_accel.z);
+		LOG_I("accel calibration done");
+		LOG_D("accel offset x=%d y=%d z=%d", g_mpu->conf.offset_accel.x, g_mpu->conf.offset_accel.y, g_mpu->conf.offset_accel.z);
 	}
 
 	return true; // If everything goes right
@@ -763,8 +763,8 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
  */
 bool mpu_read_sensor(mpu_sensor_t sensor){
 	if(!g_mpu){
-		LOG_E( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  empty "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
-		LOG_I( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  use mpu_use_struct() to set "ANSI_ITALIC ANSI_BOLD"g_mpu"ANSI_RESET);
+		LOG_E("g_mpu = NULL");
+		LOG_I("use mpu_use_struct() to set g_mpu");
 		return false;
 	}
 
@@ -773,7 +773,7 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 	if((mask & (mask - 1))){ // If two or more sensors are read it reads all for less overhead.
 
 		if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, gc_mpu, 14)){ // Read all output register
-			LOG_E( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  failed to read 14 bytes from reg ACCEL_XOUT_H (0x%02X)", MPU_REG_ACCEL_XOUT_H);
+			LOG_E("register read failed reg=0x%02X len=14", MPU_REG_ACCEL_XOUT_H);
 			return false;
 		}
 
@@ -785,14 +785,14 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 		g_mpu->v.gyro.raw.y =  (gc_mpu[10] << 8) | gc_mpu[11]; // Save raw gyro y axis ;
 		g_mpu->v.gyro.raw.z =  (gc_mpu[12] << 8) | gc_mpu[13]; // Save raw gyro z axis ;
 
-		LOG_D( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  accel: x=%d, y=%d, z=%d; temp=%d; gyro: x=%d, y=%d, z=%d;",
+		LOG_D("raw burst accel_x=%d accel_y=%d accel_z=%d temp=%d gyro_x=%d gyro_y=%d gyro_z=%d",
 				g_mpu->v.accel.raw.x, g_mpu->v.accel.raw.y, g_mpu->v.accel.raw.z,
 				g_mpu->v.temp.raw,
 				g_mpu->v.gyro.raw.x, g_mpu->v.gyro.raw.y, g_mpu->v.gyro.raw.z);
 	}else{
 		if(mask & MPU_ACCEL){ // Only accelerometer
 			if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, gc_mpu, 6)){ // Read accelerometer output register
-				LOG_E( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  failed to read 6 bytes from reg ACCEL_XOUT_H (0x%02X)", MPU_REG_ACCEL_XOUT_H);
+				LOG_E("register read failed reg=0x%02X len=6", MPU_REG_ACCEL_XOUT_H);
 				return false;
 			}
 
@@ -800,22 +800,22 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 			g_mpu->v.accel.raw.y = (gc_mpu[2]  << 8) | gc_mpu[3]; // Save raw accelerometer y axis
 			g_mpu->v.accel.raw.z = (gc_mpu[4]  << 8) | gc_mpu[5]; // Save raw accelerometer z axis
 
-			LOG_D( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  accel: x=%d, y=%d, z=%d;",
+			LOG_D("raw accel x=%d y=%d z=%d",
 					g_mpu->v.accel.raw.x, g_mpu->v.accel.raw.y, g_mpu->v.accel.raw.z);
 		}
 		if(mask & MPU_TEMP){ // Only temperatur
 			if(!mpu_read_register(MPU_REG_TEMP_OUT_H, gc_mpu, 2)){ // Reads temperatur output register
-				LOG_E( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  failed to read 2 bytes from reg TEMP_OUT_H (0x%02X)", MPU_REG_TEMP_OUT_H);
+				LOG_E("register read failed reg=0x%02X len=2", MPU_REG_TEMP_OUT_H);
 				return false;
 			}
 
 			g_mpu->v.temp.raw = (gc_mpu[0]  << 8) | gc_mpu[1]; // Save raw temperatur
 
-			LOG_D( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  temp=%d;", g_mpu->v.temp.raw);
+			LOG_D("raw temp=%d", g_mpu->v.temp.raw);
 		}
 		if(mask & MPU_GYRO){ // Only gyroscope
 			if(!mpu_read_register(MPU_REG_GYRO_XOUT_H, gc_mpu, 6)){ // Read gyro output register
-				LOG_E( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  failed to read 6 bytes from reg GYRO_XOUT_H (0x%02X)", MPU_REG_GYRO_XOUT_H);
+				LOG_E("register read failed reg=0x%02X len=6", MPU_REG_GYRO_XOUT_H);
 				return false;
 			}
 
@@ -823,7 +823,7 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 			g_mpu->v.gyro.raw.y = (gc_mpu[2] << 8) | gc_mpu[3]; // Save raw gyro y axis
 			g_mpu->v.gyro.raw.z = (gc_mpu[4] << 8) | gc_mpu[5]; // Save raw gyro z axis
 
-			LOG_D( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  gyro: x=%d, y=%d, z=%d;",
+			LOG_D("raw gyro x=%d y=%d z=%d",
 					g_mpu->v.gyro.raw.x, g_mpu->v.gyro.raw.y, g_mpu->v.gyro.raw.z);
 		}
 	}
@@ -834,13 +834,13 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 			g_mpu->v.accel.g.y = (g_mpu->v.accel.raw.y - g_mpu->conf.offset_accel.y) / g_mpu->conf.fsr_div.accel; // Calculate raw y axis to G
 			g_mpu->v.accel.g.z = (g_mpu->v.accel.raw.z - g_mpu->conf.offset_accel.z) / g_mpu->conf.fsr_div.accel; // Calculate raw z axis to G
 
-			LOG_D( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  scaled accel: x=%0.3fg, y=%0.3fg, z=%0.3fg;",
+			LOG_D("scaled accel x=%0.3fg y=%0.3fg z=%0.3fg",
 					g_mpu->v.accel.g.x, g_mpu->v.accel.g.y, g_mpu->v.accel.g.z);
 		}
 		if(mask & MPU_TEMP){ // Raw -> °C
 			g_mpu->v.temp.celsius = (g_mpu->v.temp.raw / 340.0f) + 36.53f; // Calculate raw temperatur to °C
 
-			LOG_D( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  scaled temp: %02.2f°C;", g_mpu->v.temp.celsius);
+			LOG_D("scaled temp celsius=%02.2f", g_mpu->v.temp.celsius);
 		}
 
 		if(mask & MPU_GYRO){ // Raw -> °/s for gyroscope
@@ -848,7 +848,7 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 			g_mpu->v.gyro.dps.y = (g_mpu->v.gyro.raw.y - g_mpu->conf.offset_gyro.y) / g_mpu->conf.fsr_div.gyro; // Calculate raw y axis to °/s
 			g_mpu->v.gyro.dps.z = (g_mpu->v.gyro.raw.z - g_mpu->conf.offset_gyro.z) / g_mpu->conf.fsr_div.gyro; // Calculate raw z axis to °/s
 
-			LOG_D( ANSI_COLOR_FN "mpu_read_sensor()" ANSI_RESET ":  scaled gyro: x=%0.3f°/s, y=%0.3f°/s, z=%0.3f°/s;",
+			LOG_D("scaled gyro x=%0.3f°/s y=%0.3f°/s z=%0.3f°/s",
 					g_mpu->v.gyro.dps.x, g_mpu->v.gyro.dps.y, g_mpu->v.gyro.dps.z);
 		}
 	}
@@ -885,7 +885,7 @@ void mpu_irq_handler(uint gpio, uint32_t events){
  */
 bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg){
 	if(!mpu_read_register(MPU_REG_INT_PIN_CFG, gc_mpu, 1)){ // Reads the INT_PIN_CFG register and save it in gc_mpu
-			LOG_E( ANSI_COLOR_FN "mpu_int_pin_cfg()" ANSI_RESET ":  failed to read 1 byte from reg INT_PIN_CFG (0x%02X)", MPU_REG_INT_PIN_CFG);
+			LOG_E("register read failed reg=0x%02X len=1", MPU_REG_INT_PIN_CFG);
 			return false;
 		}
 
@@ -893,13 +893,13 @@ bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg){
 	gc_mpu[0] |= cfg; // Set the bits given in `cfg`
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_PIN_CFG, gc_mpu[0]}, 2, false)){ // Write back to registers
-		LOG_E( ANSI_COLOR_FN "mpu_int_pin_cfg()" ANSI_RESET ":  failed to write 0x%02X to reg INT_PIN_CFG (0x%02X)", gc_mpu[0], MPU_REG_INT_PIN_CFG);
+		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_INT_PIN_CFG, gc_mpu[0]);
 		return false;
 	}
 
 	sleep_ms(2); // Little activation pause
 
-	LOG_I( ANSI_COLOR_FN "mpu_int_pin_cfg()" ANSI_RESET ":  interrupt pin configured. written 0x%02X to reg INT_PIN_CFG (0x%02X)", cfg, MPU_REG_INT_PIN_CFG);
+	LOG_I("interrupt pin config applied value=0x%02X reg=0x%02X", cfg, MPU_REG_INT_PIN_CFG);
 
 	return true; // If everything goes right
 }
@@ -929,17 +929,17 @@ bool mpu_int_motion_cfg(uint8_t ms, uint16_t mg){
 	else               mg /= 32; // else divide by 32 for the mpu
 
 	if(!mpu_ahpf(MPU_AHPF_5HZ)){ // Set the accel high pass filter to 5Hz
-		LOG_E( ANSI_COLOR_FN "mpu_int_motion_cfg()" ANSI_RESET ":  failed to set ahpf to 5Hz");
+		LOG_E("ahpf config failed value=0x%02X", MPU_AHPF_5HZ);
 		return false;
 	}
 	if(!mpu_write_register((uint8_t[]){MPU_REG_MOT_THR, mg, ms}, 3, false)){ // Write the motion threashold to the given arguments
-		LOG_E( ANSI_COLOR_FN "mpu_int_motion_cfg()" ANSI_RESET ":  failed to write 0x%02X, 0x%02X to reg MOT_THR (0x%02X)", mg, ms, MPU_REG_MOT_THR);
+		LOG_E("register write failed reg=0x%02X values=0x%02X,0x%02X", MPU_REG_MOT_THR, mg, ms);
 		return false;
 	}
 
 	sleep_ms(2); // Little activation pause
 
-	LOG_I( ANSI_COLOR_FN "mpu_int_motion_cfg()" ANSI_RESET ":  motion int configured. written 0x%02X, 0x%02X to reg MOT_THR (0x%02X)", mg, ms, MPU_REG_MOT_THR);
+	LOG_I("motion interrupt config applied values=0x%02X,0x%02X reg=0x%02X", mg, ms, MPU_REG_MOT_THR);
 
 	return true; // If everything is ok
 }
@@ -963,10 +963,10 @@ bool mpu_int_motion_cfg(uint8_t ms, uint16_t mg){
  */
 bool mpu_int_enable(mpu_int_enable_t interrupt){
 	gpio_set_irq_enabled_with_callback(MPU_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &mpu_irq_handler); // Listen MPU_INT_PIN call `mpu_irq_handler` if pin HIGH
-	LOG_I( ANSI_COLOR_FN "mpu_int_enable()" ANSI_RESET ":  set IRQ with rising edge on GPIO%d", MPU_INT_PIN);
+	LOG_I("IRQ enabled gpio=%d edge=rising", MPU_INT_PIN);
 
 	if(!mpu_read_register(MPU_REG_INT_ENABLE, gc_mpu, 1)){ // Read the INT_ENABLE register
-			LOG_E( ANSI_COLOR_FN "mpu_int_enable()" ANSI_RESET ":  failed to read 1 byte from reg INT_ENABLE (0x%02X)", MPU_REG_INT_ENABLE);
+			LOG_E("register read failed reg=0x%02X len=1", MPU_REG_INT_ENABLE);
 			return false;
 		}
 
@@ -974,13 +974,13 @@ bool mpu_int_enable(mpu_int_enable_t interrupt){
 	gc_mpu[0] |= interrupt; // Sets with the bitmask given by argument
 
 	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_ENABLE, gc_mpu[0]}, 2, false)){ // Write back to registers
-		LOG_E( ANSI_COLOR_FN "mpu_int_enable()" ANSI_RESET ":  failed to write 0x%02X to reg INT_ENABLE (0x%02X)", gc_mpu[0], MPU_REG_INT_ENABLE);
+		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_INT_ENABLE, gc_mpu[0]);
 		return false;
 	}
 
 	sleep_ms(2); // Little activation pause
 
-	LOG_I( ANSI_COLOR_FN "mpu_int_enable()" ANSI_RESET ":  interrupt activated");
+	LOG_I("interrupt activated");
 
 	return true; // When nothing goes wrong
 }
@@ -1001,11 +1001,11 @@ bool mpu_int_status(void){
 	else g_mpu_int_flag = false; // When an interrupt has occurred set the flag false
 
 	if(!mpu_read_register(MPU_REG_INT_STATUS, gc_mpu, 1)){ // Read INT_STATUS register save output in gc_mpu else return false
-			LOG_E( ANSI_COLOR_FN "mpu_int_status()" ANSI_RESET ":  failed to read 1 byte from reg INT_STATUS (0x%02X)", MPU_REG_INT_STATUS);
+			LOG_E("register read failed reg=0x%02X len=1", MPU_REG_INT_STATUS);
 			return false;
 	}
 
-	LOG_D( ANSI_COLOR_FN "mpu_int_status()" ANSI_RESET ":  interrupt = "ANSI_BOLD ANSI_GREEN"true"ANSI_RESET);
+	LOG_D("interrupt=true");
 
 	if((gc_mpu[0] & MPU_DATA_RDY_INT) || // Check data ready interrupt
 	   (gc_mpu[0] & MPU_I2C_MST_INT)  || // Check I²C master interrupt
