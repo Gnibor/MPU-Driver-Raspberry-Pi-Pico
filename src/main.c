@@ -27,11 +27,10 @@
  * ================================================================
  */
 #include "mpu.h"
-#include "rp_pico.h"
+#include "mpu_reg_map.h"
 
 int main(void){
-	stdio_usb_init();
-	while(!stdio_usb_connected()) sleep_ms(100);
+	pico_stdio_init();
 	
 	//mpu_s mpu = mpu_init(MPU_I2C_PORT, MPU_ADDR_AD0_GND);
 	mpu_s mpu = mpu_init(MPU_I2C_PORT, MPU_ADDR_AD0_GND);
@@ -43,12 +42,11 @@ int main(void){
 
 	//if(mpu_clk_sel(MPU_CLK_XGYRO)) printf("CLK_SEL is set to the internal 8Mhz clock!!!\n");
 
-	mpu_fsr(MPU_FSR_250DPS, MPU_AFSR_2G);
-
 	sleep_ms(2000);
-	mpu_calibrate((MPU_ACCEL_X | MPU_GYRO), 10);
+	mpu_calibrate((MPU_ACCEL_X | MPU_GYRO), 100);
 
-	//mpu_dlpf_cfg(MPU_DLPF_CFG_184HZ);
+	mpu_fsr(MPU_FSR_2000DPS, MPU_AFSR_8G);
+	// mpu_dlpf_cfg(MPU_DLPF_CFG_5HZ);
 
 	LOG_I("how big is the struct: %dbytes", sizeof(mpu));
 

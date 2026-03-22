@@ -24,6 +24,7 @@
  */
 #include "ansi-esc.h"
 #include "hardware/gpio.h"
+#include "rp_pico.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -238,6 +239,16 @@ bool mpu_who_am_i(void){
 	}
 }
 
+/**
+ * @brief Puts the MPUs I²C in pass-through-mode
+ */
+bool mpu_bypass(bool active){
+	if(!mpu_read_register(MPU_REG_INT_PIN_CFG, gc_mpu, 1, false)){
+		LOG_E(ANSI_COLOR_FN "mpu_bypass" ANSI_RESET "(): I²C read failed reg=0x%02X len=1 block=false", MPU_REG_INT_PIN_CFG);
+	}
+
+	return true;
+}
 
 /**
  * @brief Performs a software reset on specific internal components or the entire device.

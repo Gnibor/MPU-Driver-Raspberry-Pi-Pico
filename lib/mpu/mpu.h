@@ -186,7 +186,7 @@ bool mpu_ahpf(mpu_ahpf_t ahpf);
 bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr);
 
 // need to be done
-bool mpu_bypass(bool bypass_en);
+bool mpu_bypass(bool active);
 bool mpu_calibrate(mpu_sensor_t sensor, uint8_t sample); // calibrate sensor offsets
 bool mpu_read_sensor(mpu_sensor_t sensor);
 bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate);
