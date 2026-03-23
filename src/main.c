@@ -31,7 +31,7 @@
 int main(void){
 	pico_stdio_init();
 	
-	mpu_s mpu = mpu_init(MPU_I2C_PORT, MPU_ADDR_AD0_GND);
+	mpu_s mpu = mpu_init(MPU_I2C_HW, MPU_ADDR_AD0_GND);
 	mpu_use_struct(&mpu);
 
 	mpu_bypass(true);

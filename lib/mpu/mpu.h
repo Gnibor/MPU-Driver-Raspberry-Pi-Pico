@@ -34,8 +34,8 @@
 // =============================
 // === Configurable Hardware ===
 // =============================
-#ifndef MPU_I2C_PORT
-#define MPU_I2C_PORT i2c1_hw // Default I2C port
+#ifndef MPU_I2C_HW
+#define MPU_I2C_HW i2c1_hw // Default I2C port
 #endif
 
 #ifndef MPU_SDA_PIN
@@ -58,8 +58,6 @@
 #define MPU_INT_PULLUP 0 // 1 = enable internal pull-up, 0 = disabled
 #endif
 
-#define MPU_ONE_G 16384
-
 /**
  * @brief Sensors and modifiers for read and calibration operations.
  * 
@@ -76,10 +74,6 @@ typedef enum{
 	MPU_ACCEL_X = ((1 << 4) | MPU_ACCEL), /**< Calibrate Accel with X-axis against gravity. 0b00010001 0x11 */
 	MPU_ACCEL_Y = ((1 << 5) | MPU_ACCEL), /**< Calibrate Accel with Y-axis against gravity. 0b00100001 0x21 */
 	MPU_ACCEL_Z = ((1 << 6) | MPU_ACCEL), /**< Calibrate Accel with Z-axis against gravity. 0b01000001 0x41 */
-
-	MPU_GYRO_X  = ((1 << 4) | (1 << 7) | MPU_GYRO), /**< Internal gyro X mapping. 0b10010100 0x94 */
-	MPU_GYRO_Y  = ((1 << 5) | (1 << 7) | MPU_GYRO), /**< Internal gyro Y mapping. 0b10100100 0xA4 */
-	MPU_GYRO_Z  = ((1 << 6) | (1 << 7) | MPU_GYRO), /**< Internal gyro Z mapping. 0b11000100 0xC4 */
 
 	MPU_ALL     = (MPU_ACCEL | MPU_TEMP | MPU_GYRO) /**< All primary sensors. 0b00000111 0x07 */
 } mpu_sensor_t;
@@ -118,13 +112,6 @@ typedef enum {
     MPU_RESET_DEVICE   = (1 << 7)  /**< Trigger full chip reset. */
 } mpu_reset_t;
 
-typedef uint8_t mpu_cache_t;
-
-// ========================
-// === Global Variables ===
-// ========================
-extern volatile bool g_mpu_int_flag;
-
 // =====================
 // === Data Structur ===
 // =====================
@@ -134,7 +121,6 @@ extern volatile bool g_mpu_int_flag;
  * This struct contains:
  * - Measured values
  * - Configuration state
- * - Function pointers (pseudo OOP style)
  */
 typedef struct mpu_s{
 	// =====================
@@ -168,14 +154,11 @@ typedef struct mpu_s{
 	} conf;
 } mpu_s;
 
-extern mpu_s *g_mpu;
 // ============================
 // === Function declaration ===
 // ============================
 mpu_s mpu_init(i2c_hw_t *i2c_hw, mpu_addr_t addr);
 bool mpu_use_struct(mpu_s *device);
-bool mpu_write_register(uint8_t *data, uint8_t how_many, bool nostop);
-bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many);
 bool mpu_who_am_i(void);
 bool mpu_reset(mpu_reset_t reset);
 bool mpu_sleep(mpu_sleep_t sleep); // Set sleep configuration
@@ -192,7 +175,6 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t sample); // calibrate sensor off
 bool mpu_read_sensor(mpu_sensor_t sensor);
 bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate);
 #if MPU_INT_PIN
-void mpu_irq_handler(uint gpio, uint32_t events);
 bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg);
 bool mpu_int_enable(mpu_int_enable_t enable);
 bool mpu_int_motion_cfg(uint8_t ms, uint16_t mg);

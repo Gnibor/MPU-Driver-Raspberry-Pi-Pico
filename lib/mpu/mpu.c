@@ -30,9 +30,16 @@
 #include "mpu.h"
 #include "i2c.h"
 
+// ================
+// === Typedefs ===
+// ================
+typedef uint8_t mpu_cache_t;
+
 // ===========================
 // === Function prototypes ===
 // ===========================
+bool _mpu_write_reg(uint8_t *data, uint8_t how_many, bool nostop);
+bool _mpu_read_reg(uint8_t reg, uint8_t *out, uint8_t how_many);
 
 // ========================
 // === Global Variables ===
@@ -153,7 +160,7 @@ bool mpu_use_struct(mpu_s *device){
  * @return true  If the number of bytes written matches @p how_many.
  * @return false If @ref g_mpu is not set or I2C communication failed.
  */
-bool mpu_write_register(uint8_t *data, uint8_t how_many, bool nostop){
+bool _mpu_write_reg(uint8_t *data, uint8_t how_many, bool nostop){
 	if(!g_mpu){
 		LOG_E("g_mpu = NULL");
 		LOG_I("use mpu_use_struct() to set g_mpu");
@@ -184,14 +191,14 @@ bool mpu_write_register(uint8_t *data, uint8_t how_many, bool nostop){
  * @return true  If the number of bytes read matches @p how_many.
  * @return false If @ref g_mpu is not set, or I2C communication failed.
  */
-bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many){
+bool _mpu_read_reg(uint8_t reg, uint8_t *out, uint8_t how_many){
 	if(!g_mpu){
 		LOG_E("g_mpu = NULL");
 		LOG_I("use mpu_use_struct() to set g_mpu");
 		return false;
 	}
 
-	if(!mpu_write_register(&reg, 1, true)){
+	if(!_mpu_write_reg(&reg, 1, true)){
 		LOG_E("register write failed reg=0x%02X", reg);
 		return false;
 	}
@@ -214,8 +221,8 @@ bool mpu_read_register(uint8_t reg, uint8_t *out, uint8_t how_many){
  * @return false If communication failed or the device ID is unknown.
  */
 bool mpu_who_am_i(void){
-	if(!mpu_read_register(MPU_REG_WHO_AM_I, gc_mpu, 1)){
-		LOG_E("mpu_read_register() failed");
+	if(!_mpu_read_reg(MPU_REG_WHO_AM_I, gc_mpu, 1)){
+		LOG_E("_mpu_read_reg() failed");
 		return false;
 	}
 
@@ -242,7 +249,7 @@ bool mpu_who_am_i(void){
  * @brief Puts the MPUs I²C in pass-through-mode
  */
 bool mpu_bypass(bool active){
-	if(!mpu_read_register(MPU_REG_INT_PIN_CFG, gc_mpu, 1)){
+	if(!_mpu_read_reg(MPU_REG_INT_PIN_CFG, gc_mpu, 1)){
 		LOG_E("I2C read failed reg=0x%02X len=1", MPU_REG_INT_PIN_CFG);
 		return false;
 	}
@@ -253,7 +260,7 @@ bool mpu_bypass(bool active){
 		gc_mpu[0] &= ~MPU_I2C_BYPASS_EN;
 	}
 
-	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_PIN_CFG, gc_mpu[0]}, 2, false)){
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_INT_PIN_CFG, gc_mpu[0]}, 2, false)){
 		LOG_E("I2C write failed reg=0x%02X value=0x%02X len=2 stop=false", MPU_REG_INT_PIN_CFG, gc_mpu[0]);
 		return false;
 	}
@@ -284,7 +291,7 @@ bool mpu_bypass(bool active){
 bool mpu_reset(mpu_reset_t reset){
 	// 1. Read current register values into global cache to preserve existing bits
 	// We read 3 bytes starting from SIGNAL_PATH_RESET (likely covering USER_CTRL & PWR_MGMT_1)
-	if (!mpu_read_register(MPU_REG_SIGNAL_PATH_RESET, (uint8_t[]){gc_mpu[1], gc_mpu[2], gc_mpu[3]}, 3)){
+	if (!_mpu_read_reg(MPU_REG_SIGNAL_PATH_RESET, (uint8_t[]){gc_mpu[1], gc_mpu[2], gc_mpu[3]}, 3)){
 		LOG_E("register read failed reg=0x%02X len=3", MPU_REG_SIGNAL_PATH_RESET);
 		return false;
 	}
@@ -308,19 +315,19 @@ bool mpu_reset(mpu_reset_t reset){
 
 		// Trigger Main Device Reset via PWR_MGMT_1
 		gc_mpu[2] |= MPU_DEVICE_RESET; // Warning: index logic should match your register mapping
-		if (!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[3]}, 2, false)) return false;
+		if (!_mpu_write_reg((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[3]}, 2, false)) return false;
 		sleep_ms(150); // Wait for internal reboot
 
 		// Reset Signal Paths (Analog/Digital Filters)
 		LOG_D("signal path reset started");
 		gc_mpu[0] |= (MPU_TEMP_RESET | MPU_ACCEL_RESET | MPU_GYRO_RESET);
-		if (!mpu_write_register((uint8_t[]){MPU_REG_SIGNAL_PATH_RESET, gc_mpu[1]}, 2, false)) return false;
+		if (!_mpu_write_reg((uint8_t[]){MPU_REG_SIGNAL_PATH_RESET, gc_mpu[1]}, 2, false)) return false;
 		sleep_ms(200);
 
 		// Reset User Control (FIFO, I2C Master, Logic)
 		LOG_D("user control reset started");
 		gc_mpu[1] |= (MPU_SIG_COND_RESET | MPU_I2C_MST_RESET | MPU_FIFO_RESET);
-		if (!mpu_write_register((uint8_t[]){MPU_REG_USER_CTRL, gc_mpu[2]}, 2, false)) return false;
+		if (!_mpu_write_reg((uint8_t[]){MPU_REG_USER_CTRL, gc_mpu[2]}, 2, false)) return false;
 		sleep_ms(200);
 
 		LOG_I("full reset complete");
@@ -328,7 +335,7 @@ bool mpu_reset(mpu_reset_t reset){
 		// Partial reset of specific signal paths
 		LOG_I("partial reset requested mask=0x%02X", reset);
 		gc_mpu[0] = MPU_REG_SIGNAL_PATH_RESET;
-		if (!mpu_write_register(gc_mpu, 4, false)){
+		if (!_mpu_write_reg(gc_mpu, 4, false)){
 			LOG_E("partial reset write failed");
 			return false;
 		}
@@ -346,7 +353,7 @@ bool mpu_reset(mpu_reset_t reset){
  * @note This function manages bits in the @c PWR_MGMT_1 register.
  */
 bool mpu_sleep(mpu_sleep_t sleep){
-	if(!mpu_read_register(MPU_REG_PWR_MGMT_1, gc_mpu, 1)){
+	if(!_mpu_read_reg(MPU_REG_PWR_MGMT_1, gc_mpu, 1)){
 		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_PWR_MGMT_1);
 		return false;
 	}
@@ -369,7 +376,7 @@ bool mpu_sleep(mpu_sleep_t sleep){
 		LOG_I("temp wake-up sequence started");
 	}
 
-	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[0]}, 2, false)){
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[0]}, 2, false)){
 		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_PWR_MGMT_1, gc_mpu[0]);
 		return false;
 	}
@@ -388,7 +395,7 @@ bool mpu_sleep(mpu_sleep_t sleep){
  * @return true if @c PWR_MGMT_2 was updated successfully.
  */
 bool mpu_stby(mpu_stby_t stby){
-	if(!mpu_read_register(MPU_REG_PWR_MGMT_2, gc_mpu, 1)){
+	if(!_mpu_read_reg(MPU_REG_PWR_MGMT_2, gc_mpu, 1)){
 		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_PWR_MGMT_2);
 		return false;
 	}
@@ -396,7 +403,7 @@ bool mpu_stby(mpu_stby_t stby){
 	gc_mpu[0] &= ~MPU_STBY_ALL;
 	gc_mpu[0] |= stby;
 
-	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_2, gc_mpu[0]}, 2, false)){
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_PWR_MGMT_2, gc_mpu[0]}, 2, false)){
 		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_PWR_MGMT_2, gc_mpu[0]);
 		return false;
 	}
@@ -416,7 +423,7 @@ bool mpu_stby(mpu_stby_t stby){
  * @return true if clock source was updated.
  */
 bool mpu_clk_sel(mpu_clk_sel_t clksel){
-	if(!mpu_read_register(MPU_REG_PWR_MGMT_1, gc_mpu, 1)){
+	if(!_mpu_read_reg(MPU_REG_PWR_MGMT_1, gc_mpu, 1)){
 		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_PWR_MGMT_1);
 		return false;
 	}
@@ -424,7 +431,7 @@ bool mpu_clk_sel(mpu_clk_sel_t clksel){
 	gc_mpu[0] &= ~MPU_CLK_STOP;
 	gc_mpu[0] |= clksel;
 
-	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[0]}, 2, false)){
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[0]}, 2, false)){
 		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_PWR_MGMT_1, gc_mpu[0]);
 		return false;
 	}
@@ -446,7 +453,7 @@ bool mpu_clk_sel(mpu_clk_sel_t clksel){
  * @return true if @c CONFIG register was updated.
  */
 bool mpu_dlpf_cfg(mpu_dlpf_cfg_t cfg){
-	if(!mpu_read_register(MPU_REG_CONFIG, gc_mpu, 1)){
+	if(!_mpu_read_reg(MPU_REG_CONFIG, gc_mpu, 1)){
 		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_CONFIG);
 		return false;
 	}
@@ -454,7 +461,7 @@ bool mpu_dlpf_cfg(mpu_dlpf_cfg_t cfg){
 	gc_mpu[0] &= ~MPU_DLPF_CFG_3600HZ;
 	gc_mpu[0] |= cfg;
 
-	if(!mpu_write_register((uint8_t[]){MPU_REG_CONFIG, gc_mpu[0]}, 2, false)){
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_CONFIG, gc_mpu[0]}, 2, false)){
 		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_CONFIG, gc_mpu[0]);
 		return false;
 	}
@@ -479,7 +486,7 @@ bool mpu_smplrt_div(mpu_smplrt_div_t smplrt_div){
 	gc_mpu[0] = MPU_REG_SMPLRT_DIV;
 	gc_mpu[1] = smplrt_div;
 
-	if(!mpu_write_register(gc_mpu, 2, false)){
+	if(!_mpu_write_reg(gc_mpu, 2, false)){
 		LOG_E("register write failed reg=0x%02X value=0x%02X", gc_mpu[0], gc_mpu[1]);
 		return false;
 	}
@@ -506,7 +513,7 @@ bool mpu_smplrt_div(mpu_smplrt_div_t smplrt_div){
  *       filter coefficients stabilize.
  */
 bool mpu_ahpf(mpu_ahpf_t ahpf){
-	if(!mpu_read_register(MPU_REG_ACCEL_CONFIG, gc_mpu, 1)){
+	if(!_mpu_read_reg(MPU_REG_ACCEL_CONFIG, gc_mpu, 1)){
 		LOG_E("register read failed reg=0x%02X len=1", MPU_REG_ACCEL_CONFIG);
 		return false;
 	}
@@ -515,7 +522,7 @@ bool mpu_ahpf(mpu_ahpf_t ahpf){
 	gc_mpu[1] = (gc_mpu[0] | ahpf);
 	gc_mpu[0] = MPU_REG_ACCEL_CONFIG;
 
-	if(!mpu_write_register(gc_mpu, 2, false)){
+	if(!_mpu_write_reg(gc_mpu, 2, false)){
 		LOG_E("register write failed reg=0x%02X value=0x%02X", gc_mpu[0], gc_mpu[1]);
 		return false;
 	}
@@ -546,7 +553,7 @@ bool mpu_ahpf(mpu_ahpf_t ahpf){
  */
 bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate){
 	// Read current power management registers (PWR_MGMT_1 and PWR_MGMT_2)
-	if(!mpu_read_register(MPU_REG_PWR_MGMT_1, gc_mpu, 2)){
+	if(!_mpu_read_reg(MPU_REG_PWR_MGMT_1, gc_mpu, 2)){
 		LOG_E("register read failed reg=0x%02X len=2", MPU_REG_PWR_MGMT_1);
 		return false;
 	}
@@ -575,7 +582,7 @@ bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate){
 	}
 
 	// Write back updated registers
-	if(!mpu_write_register((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[0], gc_mpu[1]}, 3, false)){
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_PWR_MGMT_1, gc_mpu[0], gc_mpu[1]}, 3, false)){
 		LOG_E("register write failed reg=0x%02X values=0x%02X,0x%02X", MPU_REG_PWR_MGMT_1, gc_mpu[0], gc_mpu[1]);
 		return false;
 	}
@@ -605,7 +612,7 @@ bool mpu_cycle_mode(mpu_cycle_t mode, mpu_lp_wake_t wake_up_rate){
  */
 bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr){
 	// Read FSR Register
-	if(!mpu_read_register(MPU_REG_GYRO_CONFIG, gc_mpu, 2)){
+	if(!_mpu_read_reg(MPU_REG_GYRO_CONFIG, gc_mpu, 2)){
 		LOG_E("register read failed reg=0x%02X len=2", MPU_REG_GYRO_CONFIG);
 		return false;
 	}
@@ -630,7 +637,7 @@ bool mpu_fsr(mpu_fsr_t fsr, mpu_afsr_t afsr){
 	LOG_I("accel afsr_div set value=%.3f", g_mpu->conf.fsr_div.accel);
 
 	// Write back to registers
-	if(!mpu_write_register((uint8_t[]){MPU_REG_GYRO_CONFIG, gc_mpu[0], gc_mpu[1]}, 3, false)){
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_GYRO_CONFIG, gc_mpu[0], gc_mpu[1]}, 3, false)){
 		LOG_E("register write failed reg=0x%02X values=0x%02X,0x%02X", MPU_REG_GYRO_CONFIG, gc_mpu[0], gc_mpu[1]);
 		return false;
 	}
@@ -675,7 +682,7 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 	if(mask & MPU_GYRO){ // Checks if gyro should be calibrated
 		LOG_I("gyro calibration started");
 		for(uint8_t i = 0; i < samples; i++){
-			if(!mpu_read_register(MPU_REG_GYRO_XOUT_H, gc_mpu, 6)){ // Read the gyro output
+			if(!_mpu_read_reg(MPU_REG_GYRO_XOUT_H, gc_mpu, 6)){ // Read the gyro output
 				LOG_E("register read failed reg=0x%02X len=6", MPU_REG_GYRO_XOUT_H);
 				return false;
 			}
@@ -707,7 +714,7 @@ bool mpu_calibrate(mpu_sensor_t sensor, uint8_t samples){
 		sum_x = 0; sum_y = 0; sum_z = 0; // Set sum back to `0` in case both sensors got read
 		LOG_I("accel calibration started");
 		for(uint8_t i = 0; i < samples; i++){
-			if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, gc_mpu, 6)){ // Read the accel output
+			if(!_mpu_read_reg(MPU_REG_ACCEL_XOUT_H, gc_mpu, 6)){ // Read the accel output
 				LOG_E("register read failed reg=0x%02X len=6", MPU_REG_ACCEL_XOUT_H);
 				return false;
 			}
@@ -785,7 +792,7 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 
 	if((mask & (mask - 1))){ // If two or more sensors are read it reads all for less overhead.
 
-		if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, gc_mpu, 14)){ // Read all output register
+		if(!_mpu_read_reg(MPU_REG_ACCEL_XOUT_H, gc_mpu, 14)){ // Read all output register
 			LOG_E("register read failed reg=0x%02X len=14", MPU_REG_ACCEL_XOUT_H);
 			return false;
 		}
@@ -804,7 +811,7 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 				g_mpu->v.gyro.raw.x, g_mpu->v.gyro.raw.y, g_mpu->v.gyro.raw.z);
 	}else{
 		if(mask & MPU_ACCEL){ // Only accelerometer
-			if(!mpu_read_register(MPU_REG_ACCEL_XOUT_H, gc_mpu, 6)){ // Read accelerometer output register
+			if(!_mpu_read_reg(MPU_REG_ACCEL_XOUT_H, gc_mpu, 6)){ // Read accelerometer output register
 				LOG_E("register read failed reg=0x%02X len=6", MPU_REG_ACCEL_XOUT_H);
 				return false;
 			}
@@ -817,7 +824,7 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 					g_mpu->v.accel.raw.x, g_mpu->v.accel.raw.y, g_mpu->v.accel.raw.z);
 		}
 		if(mask & MPU_TEMP){ // Only temperatur
-			if(!mpu_read_register(MPU_REG_TEMP_OUT_H, gc_mpu, 2)){ // Reads temperatur output register
+			if(!_mpu_read_reg(MPU_REG_TEMP_OUT_H, gc_mpu, 2)){ // Reads temperatur output register
 				LOG_E("register read failed reg=0x%02X len=2", MPU_REG_TEMP_OUT_H);
 				return false;
 			}
@@ -827,7 +834,7 @@ bool mpu_read_sensor(mpu_sensor_t sensor){
 			LOG_D("raw temp=%d", g_mpu->v.temp.raw);
 		}
 		if(mask & MPU_GYRO){ // Only gyroscope
-			if(!mpu_read_register(MPU_REG_GYRO_XOUT_H, gc_mpu, 6)){ // Read gyro output register
+			if(!_mpu_read_reg(MPU_REG_GYRO_XOUT_H, gc_mpu, 6)){ // Read gyro output register
 				LOG_E("register read failed reg=0x%02X len=6", MPU_REG_GYRO_XOUT_H);
 				return false;
 			}
@@ -882,7 +889,7 @@ volatile bool g_mpu_int_flag;
  * @param gpio   The GPIO pin number that triggered the interrupt.
  * @param events The bitmask of event types (e.g., EDGE_RISE).
  */
-void mpu_irq_handler(uint gpio, uint32_t events){
+void _mpu_irq_handler(uint gpio, uint32_t events){
 	(void)events;
     if(gpio == MPU_INT_PIN){   // Checks if the called pin is MPU_INT_PIN
         g_mpu_int_flag = true; // if it is set `g_mpu_int_flag` true.
@@ -897,7 +904,7 @@ void mpu_irq_handler(uint gpio, uint32_t events){
  * @return false If I2C communication failed.
  */
 bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg){
-	if(!mpu_read_register(MPU_REG_INT_PIN_CFG, gc_mpu, 1)){ // Reads the INT_PIN_CFG register and save it in gc_mpu
+	if(!_mpu_read_reg(MPU_REG_INT_PIN_CFG, gc_mpu, 1)){ // Reads the INT_PIN_CFG register and save it in gc_mpu
 			LOG_E("register read failed reg=0x%02X len=1", MPU_REG_INT_PIN_CFG);
 			return false;
 		}
@@ -905,7 +912,7 @@ bool mpu_int_pin_cfg(mpu_int_pin_cfg_t cfg){
 	gc_mpu[0] &= ~MPU_INT_PIN_CFG_ALL; // Unsets all interrupt bits
 	gc_mpu[0] |= cfg; // Set the bits given in `cfg`
 
-	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_PIN_CFG, gc_mpu[0]}, 2, false)){ // Write back to registers
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_INT_PIN_CFG, gc_mpu[0]}, 2, false)){ // Write back to registers
 		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_INT_PIN_CFG, gc_mpu[0]);
 		return false;
 	}
@@ -945,7 +952,7 @@ bool mpu_int_motion_cfg(uint8_t ms, uint16_t mg){
 		LOG_E("ahpf config failed value=0x%02X", MPU_AHPF_5HZ);
 		return false;
 	}
-	if(!mpu_write_register((uint8_t[]){MPU_REG_MOT_THR, mg, ms}, 3, false)){ // Write the motion threashold to the given arguments
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_MOT_THR, mg, ms}, 3, false)){ // Write the motion threashold to the given arguments
 		LOG_E("register write failed reg=0x%02X values=0x%02X,0x%02X", MPU_REG_MOT_THR, mg, ms);
 		return false;
 	}
@@ -975,10 +982,10 @@ bool mpu_int_motion_cfg(uint8_t ms, uint16_t mg){
  * @note    Includes a 2ms sleep to allow the interrupt logic to stabilize.
  */
 bool mpu_int_enable(mpu_int_enable_t interrupt){
-	gpio_set_irq_enabled_with_callback(MPU_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &mpu_irq_handler); // Listen MPU_INT_PIN call `mpu_irq_handler` if pin HIGH
+	gpio_set_irq_enabled_with_callback(MPU_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &_mpu_irq_handler); // Listen MPU_INT_PIN call `mpu_irq_handler` if pin HIGH
 	LOG_I("IRQ enabled gpio=%d edge=rising", MPU_INT_PIN);
 
-	if(!mpu_read_register(MPU_REG_INT_ENABLE, gc_mpu, 1)){ // Read the INT_ENABLE register
+	if(!_mpu_read_reg(MPU_REG_INT_ENABLE, gc_mpu, 1)){ // Read the INT_ENABLE register
 			LOG_E("register read failed reg=0x%02X len=1", MPU_REG_INT_ENABLE);
 			return false;
 		}
@@ -986,7 +993,7 @@ bool mpu_int_enable(mpu_int_enable_t interrupt){
 	gc_mpu[0] &= ~MPU_INT_ENABLE_ALL; // Unsets all interrupt bits
 	gc_mpu[0] |= interrupt; // Sets with the bitmask given by argument
 
-	if(!mpu_write_register((uint8_t[]){MPU_REG_INT_ENABLE, gc_mpu[0]}, 2, false)){ // Write back to registers
+	if(!_mpu_write_reg((uint8_t[]){MPU_REG_INT_ENABLE, gc_mpu[0]}, 2, false)){ // Write back to registers
 		LOG_E("register write failed reg=0x%02X value=0x%02X", MPU_REG_INT_ENABLE, gc_mpu[0]);
 		return false;
 	}
@@ -1013,7 +1020,7 @@ bool mpu_int_status(void){
 	if(!g_mpu_int_flag) return false; // Checks if an interrupt occurred at MPU_INT_PIN
 	else g_mpu_int_flag = false; // When an interrupt has occurred set the flag false
 
-	if(!mpu_read_register(MPU_REG_INT_STATUS, gc_mpu, 1)){ // Read INT_STATUS register save output in gc_mpu else return false
+	if(!_mpu_read_reg(MPU_REG_INT_STATUS, gc_mpu, 1)){ // Read INT_STATUS register save output in gc_mpu else return false
 			LOG_E("register read failed reg=0x%02X len=1", MPU_REG_INT_STATUS);
 			return false;
 	}
