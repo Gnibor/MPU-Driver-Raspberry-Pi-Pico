@@ -20,6 +20,7 @@ add_compile_definitions(
 )
 
 add_executable(${PROJECT_NAME}
+    lib/log.c
     lib/mpu/mpu.c
     lib/i2c.c
     src/main.c
