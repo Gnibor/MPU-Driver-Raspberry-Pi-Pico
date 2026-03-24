@@ -19,6 +19,8 @@ add_compile_definitions(
     APP_AUTHOR="${PROJECT_AUTHOR}"
 )
 
+	endforeach()
+	list(REMOVE_DUPLICATES dir_list)
 add_executable(${PROJECT_NAME}
     lib/log.c
     lib/mpu/mpu.c
